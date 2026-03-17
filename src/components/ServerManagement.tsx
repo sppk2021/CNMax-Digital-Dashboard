@@ -21,7 +21,6 @@ import { collection, addDoc, deleteDoc, doc, updateDoc, serverTimestamp } from '
 import { db } from '../firebase';
 import { format, parseISO } from 'date-fns';
 import { cn } from '../utils';
-import { ComposableMap, Geographies, Geography, ZoomableGroup, Marker } from 'react-simple-maps';
 
 // Simple mapping of location names to [longitude, latitude]
 const locationCoords: { [key: string]: [number, number] } = {
@@ -226,8 +225,8 @@ export function ServerManagement({ servers }: ServerManagementProps) {
         </div>
       </div>
 
-      {/* World Map */}
-      <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+      {/* World Map - Temporarily disabled due to dependency conflict */}
+      {/* <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
         <h3 className="text-xl font-bold text-slate-800 mb-6">Server Locations</h3>
         <ComposableMap projection="geoMercator" height={300}>
           <ZoomableGroup zoom={1}>
@@ -252,7 +251,7 @@ export function ServerManagement({ servers }: ServerManagementProps) {
             })}
           </ZoomableGroup>
         </ComposableMap>
-      </div>
+      </div> */}
 
       {/* Search & Filter */}
       <div className="flex flex-col md:flex-row gap-4">

@@ -22,6 +22,7 @@ export enum OperationType {
 
 interface FirestoreErrorInfo {
   error: string;
+  userMessage: string;
   operationType: OperationType;
   path: string | null;
   authInfo: {
@@ -39,9 +40,19 @@ interface FirestoreErrorInfo {
   }
 }
 
+function getUserMessage(errorMessage: string, operationType: OperationType): string {
+  if (errorMessage.includes('permission-denied')) return "You don't have permission to perform this action.";
+  if (errorMessage.includes('not-found')) return "The requested information could not be found.";
+  if (errorMessage.includes('unavailable')) return "The service is temporarily unavailable. Please try again later.";
+  if (errorMessage.includes('unauthenticated')) return "You need to be signed in to perform this action.";
+  return `An error occurred while trying to ${operationType} the information. Please try again.`;
+}
+
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errorMessage = error instanceof Error ? error.message : String(error);
   const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
+    error: errorMessage,
+    userMessage: getUserMessage(errorMessage, operationType),
     authInfo: {
       userId: auth.currentUser?.uid,
       email: auth.currentUser?.email,
