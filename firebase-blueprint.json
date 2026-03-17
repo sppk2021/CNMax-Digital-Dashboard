@@ -1,0 +1,246 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A customer identified by their social name.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Facebook or Viber name"
+        },
+        "subscriptionStartDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the subscription started"
+        },
+        "expiryDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the subscription expires"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Active", "Expired"],
+          "description": "Current status of the user"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the user was created"
+        },
+        "lastRenewedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the user was last renewed"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional notes about the user"
+        },
+        "planName": {
+          "type": "string",
+          "description": "Current subscription plan name"
+        }
+      },
+      "required": ["name", "subscriptionStartDate", "expiryDate", "status", "createdAt"]
+    },
+    "Expense": {
+      "title": "Expense",
+      "description": "A business expense record.",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Description of the expense"
+        },
+        "amount": {
+          "type": "number",
+          "description": "Amount of the expense"
+        },
+        "date": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the expense occurred"
+        },
+        "category": {
+          "type": "string",
+          "description": "Category of the expense (e.g. Marketing, Server, Salary)"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional notes"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the record was created"
+        }
+      },
+      "required": ["title", "amount", "date", "category", "createdAt"]
+    },
+    "Sale": {
+      "title": "Sale",
+      "description": "A transaction or subscription event record.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Reference to the user"
+        },
+        "userName": {
+          "type": "string",
+          "description": "Name of the user at the time of sale"
+        },
+        "date": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the sale or event occurred"
+        },
+        "amount": {
+          "type": "number",
+          "description": "Amount of the sale (0 for expired events)"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["New", "Renewal", "Expired"],
+          "description": "Type of event"
+        },
+        "planName": {
+          "type": "string",
+          "description": "Plan name associated with this event"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional notes about the event"
+        }
+      },
+      "required": ["userId", "userName", "date", "amount", "type"]
+    },
+    "Plan": {
+      "title": "Plan",
+      "description": "A subscription plan configuration.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name of the plan (e.g. 1 Month)"
+        },
+        "durationDays": {
+          "type": "integer",
+          "description": "Duration in days"
+        },
+        "price": {
+          "type": "number",
+          "description": "Price of the plan"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the plan was created"
+        }
+      },
+      "required": ["name", "durationDays", "price", "createdAt"]
+    },
+    "Admin": {
+      "title": "Admin",
+      "description": "An authorized administrator for the dashboard.",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Google email address of the admin"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["admin"],
+          "description": "Role of the user"
+        },
+        "addedBy": {
+          "type": "string",
+          "description": "Email of the admin who added this user"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the admin was added"
+        }
+      },
+      "required": ["email", "role", "createdAt"]
+    },
+    "Server": {
+      "title": "Server",
+      "description": "A server record for monitoring.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name of the server"
+        },
+        "url": {
+          "type": "string",
+          "description": "URL of the server"
+        },
+        "uptimeRobotUrl": {
+          "type": "string",
+          "description": "Uptime Robot status page URL"
+        },
+        "location": {
+          "type": "string",
+          "description": "Physical or cloud location (e.g. Singapore, US-East)"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Online", "Offline", "Maintenance"],
+          "description": "Current status of the server"
+        },
+        "ipAddress": {
+          "type": "string",
+          "description": "IP address of the server"
+        },
+        "provider": {
+          "type": "string",
+          "description": "Hosting provider (e.g. AWS, DigitalOcean)"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the record was created"
+        },
+        "lastCheckedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the server was last checked"
+        }
+      },
+      "required": ["name", "url", "location", "status", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users": {
+      "schema": "User",
+      "description": "Collection of customers"
+    },
+    "/sales": {
+      "schema": "Sale",
+      "description": "Collection of transactions"
+    },
+    "/plans": {
+      "schema": "Plan",
+      "description": "Collection of subscription plans"
+    },
+    "/expenses": {
+      "schema": "Expense",
+      "description": "Collection of business expenses"
+    },
+    "/admins": {
+      "schema": "Admin",
+      "description": "Collection of authorized administrators"
+    },
+    "/servers": {
+      "schema": "Server",
+      "description": "Collection of monitored servers"
+    }
+  }
+}

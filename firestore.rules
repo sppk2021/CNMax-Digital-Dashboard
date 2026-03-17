@@ -1,0 +1,130 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Fields:
+    //   - name: string
+    //   - subscriptionStartDate: string (ISO 8601)
+    //   - expiryDate: string (ISO 8601)
+    //   - status: string (Active/Expired)
+    //   - createdAt: string (ISO 8601)
+    //   - lastRenewedAt: string (ISO 8601) (optional)
+    //   - notes: string (optional)
+    //   - planName: string (optional)
+    //
+    // Collection: sales
+    // Fields:
+    //   - userId: string
+    //   - userName: string
+    //   - date: string (ISO 8601)
+    //   - amount: number
+    //   - type: string (New/Renewal/Expired)
+    //   - planName: string (optional)
+    //   - notes: string (optional)
+    //
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (exists(/databases/$(database)/documents/admins/$(request.auth.token.email)) ||
+         (request.auth.token.email == "sawpyaephyokyaw777@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidAdmin(data) {
+      return data.email is string && data.email.size() > 0 && data.email.size() < 100 &&
+             data.role == 'admin' &&
+             (data.createdAt is timestamp || data.createdAt is string);
+    }
+
+    match /admins/{email} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    function isValidUser(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.subscriptionStartDate is string &&
+             data.expiryDate is string &&
+             data.status in ['Active', 'Expired'] &&
+             data.createdAt is string &&
+             (!('lastRenewedAt' in data) || data.lastRenewedAt is string) &&
+             (!('notes' in data) || data.notes is string) &&
+             (!('planName' in data) || data.planName is string);
+    }
+
+    function isValidSale(data) {
+      return data.userId is string &&
+             data.userName is string &&
+             data.date is string &&
+             data.amount is number &&
+             data.type in ['New', 'Renewal', 'Expired'] &&
+             (!('planName' in data) || data.planName is string) &&
+             (!('notes' in data) || data.notes is string);
+    }
+
+    function isValidPlan(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() < 50 &&
+             data.durationDays is int && data.durationDays > 0 &&
+             data.price is number && data.price >= 0 &&
+             data.createdAt is string;
+    }
+
+    function isValidExpense(data) {
+      return data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.amount is number && data.amount >= 0 &&
+             data.date is string &&
+             data.category is string &&
+             data.createdAt is string &&
+             (!('notes' in data) || data.notes is string);
+    }
+
+    function isValidServer(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.url is string && data.url.size() > 0 &&
+             (!('uptimeRobotUrl' in data) || data.uptimeRobotUrl is string) &&
+             data.location is string &&
+             data.status in ['Online', 'Offline', 'Maintenance'] &&
+             data.createdAt is string &&
+             (!('ipAddress' in data) || data.ipAddress is string) &&
+             (!('provider' in data) || data.provider is string) &&
+             (!('lastCheckedAt' in data) || data.lastCheckedAt is string);
+    }
+
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated() && isValidUser(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /sales/{saleId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidSale(request.resource.data);
+      allow update, delete: if isAdmin();
+    }
+
+    match /plans/{planId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() && isValidPlan(request.resource.data);
+    }
+
+    match /expenses/{expenseId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated() && isValidExpense(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /servers/{serverId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated() && isValidServer(request.resource.data);
+      allow delete: if isAdmin();
+    }
+  }
+}
