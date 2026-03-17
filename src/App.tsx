@@ -5,23 +5,18 @@
 
 import React, { useEffect, useState } from 'react';
 import { 
-  onAuthStateChanged, 
-  signInWithEmailAndPassword,
-  signOut,
-  User as FirebaseUser
-} from 'firebase/auth';
-import { 
   collection, 
   onSnapshot, 
   query, 
   orderBy,
+  getDocs,
+  where,
   doc,
-  getDocFromServer,
-  addDoc,
+  setDoc,
   serverTimestamp,
-  setDoc
+  limit
 } from 'firebase/firestore';
-import { auth, db } from './firebase';
+import { db } from './firebase';
 import { Layout } from './components/Layout';
 import { Dashboard } from './components/Dashboard';
 import { UserList } from './components/UserList';
@@ -30,15 +25,14 @@ import { Analytics } from './components/Analytics';
 import { PlanManagement } from './components/PlanManagement';
 import { ExpenseList } from './components/ExpenseList';
 import { ServerManagement } from './components/ServerManagement';
-import { MaintenanceManager } from './components/MaintenanceManager';
 import { Settings } from './components/Settings';
-import { LogIn, LogOut, Loader2, ShieldAlert, ShieldCheck, Mail, Lock } from 'lucide-react';
+import { LogIn, Loader2, Mail, Lock } from 'lucide-react';
 import { handleFirestoreError, OperationType } from './utils';
+import bcrypt from 'bcryptjs';
 
 export default function App() {
-  const [user, setUser] = useState<FirebaseUser | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const [user, setUser] = useState<any | null>(null);
+  const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'sales' | 'analytics' | 'plans' | 'settings' | 'expenses' | 'servers'>('dashboard');
   const [users, setUsers] = useState<any[]>([]);
   const [sales, setSales] = useState<any[]>([]);
@@ -50,50 +44,14 @@ export default function App() {
   const [loginError, setLoginError] = useState('');
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
-      setUser(u);
-      if (!u) {
-        setIsAdmin(null);
-        setLoading(false);
-      }
-    });
-    return () => unsubscribe();
+    const savedUser = localStorage.getItem('adminUser');
+    if (savedUser) {
+      setUser(JSON.parse(savedUser));
+    }
   }, []);
 
   useEffect(() => {
     if (!user) return;
-
-    const adminsRef = collection(db, 'admins');
-    const q = query(adminsRef);
-    
-    const unsubscribeAdmins = onSnapshot(q, (snapshot) => {
-      const adminList = snapshot.docs.map(doc => doc.data().email.toLowerCase());
-      
-      // Bootstrap: If no admins exist, the first person to log in becomes an admin
-      if (snapshot.empty && user.email) {
-        setDoc(doc(db, 'admins', user.email.toLowerCase()), {
-          email: user.email.toLowerCase(),
-          role: 'admin',
-          createdAt: serverTimestamp(),
-          addedBy: 'system'
-        }).catch(e => {
-          console.error("Bootstrap Admin Error:", e);
-        });
-        setIsAdmin(true);
-      } else {
-        setIsAdmin(adminList.includes(user.email?.toLowerCase() || ''));
-      }
-      setLoading(false);
-    }, (error) => {
-      console.error("Firestore Error (admins listener):", error);
-      handleFirestoreError(error, OperationType.LIST, 'admins');
-    });
-
-    return () => unsubscribeAdmins();
-  }, [user]);
-
-  useEffect(() => {
-    if (!user || !isAdmin) return;
 
     const usersQuery = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
     const salesQuery = query(collection(db, 'sales'), orderBy('date', 'desc'));
@@ -131,18 +89,6 @@ export default function App() {
       handleFirestoreError(error, OperationType.LIST, 'servers');
     });
 
-    // Test connection
-    const testConnection = async () => {
-      try {
-        await getDocFromServer(doc(db, 'test', 'connection'));
-      } catch (error) {
-        if (error instanceof Error && error.message.includes('the client is offline')) {
-          console.error("Please check your Firebase configuration.");
-        }
-      }
-    };
-    testConnection();
-
     return () => {
       unsubscribeUsers();
       unsubscribeSales();
@@ -150,32 +96,107 @@ export default function App() {
       unsubscribeExpenses();
       unsubscribeServers();
     };
-  }, [user, isAdmin]);
+  }, [user]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
+    setLoading(true);
+    
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const adminsRef = collection(db, 'admins');
+      
+      // Bootstrap check: are there any admins at all?
+      const allAdminsSnapshot = await getDocs(query(adminsRef, limit(1)));
+      if (allAdminsSnapshot.empty) {
+        // Bootstrap the first admin
+        const hashedPassword = await bcrypt.hash(password, 10);
+        await setDoc(doc(db, 'admins', email.toLowerCase()), {
+          email: email.toLowerCase(),
+          password: hashedPassword,
+          role: 'admin',
+          createdAt: serverTimestamp(),
+          addedBy: 'system'
+        });
+        const userData = { email: email.toLowerCase(), role: 'admin' };
+        setUser(userData);
+        localStorage.setItem('adminUser', JSON.stringify(userData));
+        setLoading(false);
+        return;
+      }
+
+      // Normal login flow
+      const q = query(adminsRef, where('email', '==', email.toLowerCase()));
+      const querySnapshot = await getDocs(q);
+      
+      if (querySnapshot.empty) {
+        // Auto-seed the requested default admin if it doesn't exist
+        if (email.toLowerCase() === 'admin@example.com' && password === 'adminpassword123') {
+          const hashedPassword = await bcrypt.hash(password, 10);
+          await setDoc(doc(db, 'admins', email.toLowerCase()), {
+            email: email.toLowerCase(),
+            password: hashedPassword,
+            role: 'admin',
+            createdAt: serverTimestamp(),
+            addedBy: 'system'
+          });
+          const userData = { email: email.toLowerCase(), role: 'admin' };
+          setUser(userData);
+          localStorage.setItem('adminUser', JSON.stringify(userData));
+          setLoading(false);
+          return;
+        }
+
+        setLoginError('Invalid email or password.');
+        setLoading(false);
+        return;
+      }
+
+      const adminData = querySnapshot.docs[0].data();
+      
+      // Check bcrypt hash
+      let isPasswordValid = false;
+      try {
+        isPasswordValid = await bcrypt.compare(password, adminData.password);
+      } catch (e) {
+        isPasswordValid = false;
+      }
+
+      // Fallback for plain text passwords (if they were saved before bcrypt was added)
+      const isPlainTextFallback = password === adminData.password;
+
+      if (isPasswordValid || isPlainTextFallback) {
+        // Upgrade plain text password to bcrypt hash securely
+        if (!isPasswordValid && isPlainTextFallback) {
+          const hashedPassword = await bcrypt.hash(password, 10);
+          await setDoc(doc(db, 'admins', adminData.email || email.toLowerCase()), {
+            ...adminData,
+            password: hashedPassword
+          });
+        }
+
+        const userData = { email: adminData.email, role: adminData.role };
+        setUser(userData);
+        localStorage.setItem('adminUser', JSON.stringify(userData));
+      } else {
+        setLoginError('Invalid email or password.');
+      }
     } catch (error) {
       console.error("Login Error:", error);
-      setLoginError('Invalid email or password.');
+      setLoginError('An error occurred. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleLogout = () => signOut(auth);
+  const handleLogout = () => {
+    setUser(null);
+    localStorage.removeItem('adminUser');
+  };
 
   if (loading) {
     return (
       <div className="min-h-screen bg-brand-bg flex flex-col items-center justify-center p-4">
-        <div className="w-24 h-24 bg-brand-sidebar/10 rounded-3xl flex items-center justify-center mb-8 animate-pulse">
-          <img 
-            src="https://uploads.onecompiler.io/442aqr2uj/44gkkjfhk/CNMAXDIGITAL2.0.jpg" 
-            alt="CNMAX DIGITAL" 
-            className="h-14 object-contain"
-            referrerPolicy="no-referrer"
-          />
-        </div>
         <Loader2 className="w-8 h-8 text-brand-sidebar animate-spin" />
         <p className="mt-4 text-slate-400 font-bold text-xs uppercase tracking-widest">Loading Dashboard...</p>
       </div>
@@ -186,14 +207,6 @@ export default function App() {
     return (
       <div className="min-h-screen bg-brand-bg flex flex-col items-center justify-center p-4">
         <div className="max-w-md w-full bg-white rounded-[2.5rem] p-12 shadow-2xl shadow-brand-sidebar/10 border border-slate-100 text-center">
-          <div className="w-24 h-24 bg-brand-sidebar/10 rounded-3xl flex items-center justify-center mx-auto mb-8">
-            <img 
-              src="https://uploads.onecompiler.io/442aqr2uj/44gkkjfhk/CNMAXDIGITAL2.0.jpg" 
-              alt="CNMAX DIGITAL" 
-              className="h-14 object-contain"
-              referrerPolicy="no-referrer"
-            />
-          </div>
           <h1 className="text-3xl font-bold text-slate-800 mb-3">Welcome Back</h1>
           <p className="text-slate-500 mb-10 leading-relaxed">Sign in with your credentials to access the management dashboard.</p>
           
@@ -229,40 +242,6 @@ export default function App() {
               Sign In
             </button>
           </form>
-          
-          <div className="mt-12 pt-8 border-t border-slate-100 flex items-center justify-center gap-6 opacity-40 grayscale">
-            <span className="text-[10px] font-bold uppercase tracking-widest">Secure Access</span>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (isAdmin === false) {
-    return (
-      <div className="min-h-screen bg-brand-bg flex flex-col items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-[2.5rem] p-12 shadow-2xl shadow-red-500/10 border border-red-50 border-t-4 border-t-red-500 text-center">
-          <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-8">
-            <ShieldAlert className="w-10 h-10 text-red-500" />
-          </div>
-          <h1 className="text-2xl font-bold text-slate-800 mb-3">Access Restricted</h1>
-          <p className="text-slate-500 mb-8 leading-relaxed">
-            Your account (<span className="font-bold text-slate-700">{user.email}</span>) is not authorized to access this dashboard.
-          </p>
-          <div className="p-4 bg-slate-50 rounded-2xl text-xs text-slate-500 mb-8 text-left">
-            <p className="font-bold text-slate-700 mb-1">What can I do?</p>
-            <ul className="list-disc pl-4 space-y-1">
-              <li>Contact a system administrator to request access.</li>
-              <li>Ensure you are logged in with the correct email.</li>
-            </ul>
-          </div>
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-4 px-6 rounded-2xl transition-all duration-300"
-          >
-            <LogOut className="w-5 h-5" />
-            Sign Out & Try Another
-          </button>
         </div>
       </div>
     );
@@ -270,7 +249,6 @@ export default function App() {
 
   return (
     <>
-      <MaintenanceManager users={users} sales={sales} />
       <Layout 
         user={user} 
         onLogout={handleLogout} 
