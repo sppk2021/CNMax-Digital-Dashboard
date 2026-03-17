@@ -254,6 +254,8 @@ export default function App() {
         onLogout={handleLogout} 
         activeTab={activeTab} 
         setActiveTab={setActiveTab}
+        servers={servers}
+        users={users}
       >
         {activeTab === 'dashboard' && <Dashboard users={users} sales={sales} expenses={expenses} setActiveTab={setActiveTab} />}
         {activeTab === 'users' && <UserList users={users} plans={plans} sales={sales} />}

@@ -87,14 +87,21 @@ export function getNow(): Date {
 export function getStatus(expiryDate: string, startDate?: string): 'Active' | 'Expired' | 'Upcoming' {
   if (!expiryDate) return 'Expired';
   const now = getNow();
-  const expiry = parseISO(expiryDate);
+  let expiry = new Date(0);
+  try {
+    expiry = parseISO(expiryDate);
+  } catch(e) {
+    return 'Expired';
+  }
   
   if (startDate) {
-    const start = parseISO(startDate);
-    // If subscription hasn't started yet, it's upcoming
-    if (isAfter(start, now)) {
-      return 'Upcoming';
-    }
+    try {
+      const start = parseISO(startDate);
+      // If subscription hasn't started yet, it's upcoming
+      if (isAfter(start, now)) {
+        return 'Upcoming';
+      }
+    } catch(e) {}
   }
   
   // If subscription has started, check if it's still within expiry
@@ -126,8 +133,13 @@ export function getMonthInterval(date: Date) {
 /**
  * Checks if an ISO date string falls within the month of the provided monthDate.
  */
-export function isInMonth(dateStr: string, monthDate: Date) {
-  const date = parseISO(dateStr);
-  const interval = getMonthInterval(monthDate);
-  return isWithinInterval(date, interval);
+export function isInMonth(dateStr: string | undefined | null, monthDate: Date) {
+  if (!dateStr) return false;
+  try {
+    const date = parseISO(dateStr);
+    const interval = getMonthInterval(monthDate);
+    return isWithinInterval(date, interval);
+  } catch (e) {
+    return false;
+  }
 }

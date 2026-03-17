@@ -90,13 +90,23 @@ export function UserList({ users, plans, sales }: UserListProps) {
 
   const exportToCSV = () => {
     const headers = ['Name', 'Plan', 'Start Date', 'Expiry Date', 'Status'];
-    const rows = filteredUsers.map(u => [
-      u.name,
-      u.planName || 'N/A',
-      format(parseISO(u.subscriptionStartDate), 'yyyy-MM-dd'),
-      format(parseISO(u.expiryDate), 'yyyy-MM-dd'),
-      getStatus(u.expiryDate, u.subscriptionStartDate)
-    ]);
+    const rows = filteredUsers.map(u => {
+      let startDateStr = 'N/A';
+      if (u.subscriptionStartDate) {
+        try { startDateStr = format(parseISO(u.subscriptionStartDate), 'yyyy-MM-dd'); } catch(e) {}
+      }
+      let expiryDateStr = 'N/A';
+      if (u.expiryDate) {
+        try { expiryDateStr = format(parseISO(u.expiryDate), 'yyyy-MM-dd'); } catch(e) {}
+      }
+      return [
+        u.name,
+        u.planName || 'N/A',
+        startDateStr,
+        expiryDateStr,
+        getStatus(u.expiryDate, u.subscriptionStartDate)
+      ];
+    });
     
     const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -287,7 +297,14 @@ export function UserList({ users, plans, sales }: UserListProps) {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2 text-sm text-slate-500">
                         <Calendar className="w-4 h-4 text-slate-300" />
-                        {format(parseISO(user.subscriptionStartDate), 'MMM d, yyyy')}
+                        {(() => {
+                          if (!user.subscriptionStartDate) return 'N/A';
+                          try {
+                            return format(parseISO(user.subscriptionStartDate), 'MMM d, yyyy');
+                          } catch (e) {
+                            return 'Invalid Date';
+                          }
+                        })()}
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -305,7 +322,14 @@ export function UserList({ users, plans, sales }: UserListProps) {
                         "text-sm font-bold",
                         status === 'Expired' ? "text-red-500" : "text-slate-600"
                       )}>
-                        {format(parseISO(user.expiryDate), 'MMM d, yyyy')}
+                        {(() => {
+                          if (!user.expiryDate) return 'N/A';
+                          try {
+                            return format(parseISO(user.expiryDate), 'MMM d, yyyy');
+                          } catch (e) {
+                            return 'Invalid Date';
+                          }
+                        })()}
                       </p>
                     </td>
                     <td className="px-6 py-4 text-right">

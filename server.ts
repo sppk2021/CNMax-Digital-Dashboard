@@ -35,7 +35,9 @@ async function startServer() {
         html: `
           <h1>Subscription Expiry Notice</h1>
           <p>Hi ${name},</p>
-          <p>This is a friendly reminder that your subscription is set to expire on <strong>${new Date(expiryDate).toLocaleDateString()}</strong>.</p>
+          <p>This is a friendly reminder that your subscription is set to expire on <strong>${(() => {
+            try { return new Date(expiryDate).toLocaleDateString(); } catch(e) { return 'soon'; }
+          })()}</strong>.</p>
           <p>Please renew your subscription to continue enjoying our services.</p>
           <br/>
           <p>Best regards,<br/>Subscription Management Team</p>
@@ -75,7 +77,9 @@ async function startServer() {
           html: `
             <h1>Subscription Expiry Notice</h1>
             <p>Hi ${user.name},</p>
-            <p>This is a friendly reminder that your subscription is set to expire on <strong>${new Date(user.expiryDate).toLocaleDateString()}</strong>.</p>
+            <p>This is a friendly reminder that your subscription is set to expire on <strong>${(() => {
+              try { return new Date(user.expiryDate).toLocaleDateString(); } catch(e) { return 'soon'; }
+            })()}</strong>.</p>
             <p>Please renew your subscription to continue enjoying our services.</p>
             <br/>
             <p>Best regards,<br/>Subscription Management Team</p>

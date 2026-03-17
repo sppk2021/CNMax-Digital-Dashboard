@@ -56,7 +56,14 @@ export function Analytics({ users, sales, expenses }: AnalyticsProps) {
     const netProfit = revenue - totalExpenses;
     
     // Previous Month Total Users (Total users created before this month)
-    const prevMonthTotalUsers = users.filter(u => isBefore(parseISO(u.createdAt), startOfCurrent)).length;
+    const prevMonthTotalUsers = users.filter(u => {
+      if (!u.createdAt) return false;
+      try {
+        return isBefore(parseISO(u.createdAt), startOfCurrent);
+      } catch (e) {
+        return false;
+      }
+    }).length;
     
     // Expired users this month (drop-off) - using events for accuracy
     const expiredEvents = sales.filter(s => s.type === 'Expired' && isInMonth(s.date, selectedMonth));
@@ -101,21 +108,33 @@ export function Analytics({ users, sales, expenses }: AnalyticsProps) {
     // New Users Section
     csvContent += "NEW USERS\nName,Join Date,Plan\n";
     currentMonthData.newUsers.forEach(u => {
-      csvContent += `"${u.name}","${format(parseISO(u.createdAt), 'yyyy-MM-dd')}","${u.planName || 'N/A'}"\n`;
+      let dateStr = 'N/A';
+      if (u.createdAt) {
+        try { dateStr = format(parseISO(u.createdAt), 'yyyy-MM-dd'); } catch(e) {}
+      }
+      csvContent += `"${u.name}","${dateStr}","${u.planName || 'N/A'}"\n`;
     });
     csvContent += "\n";
 
     // Renewed Users Section
     csvContent += "RENEWED USERS\nName,Renewal Date,Plan,Amount\n";
     currentMonthData.renewals.forEach(s => {
-      csvContent += `"${s.userName}","${format(parseISO(s.date), 'yyyy-MM-dd')}","${s.planName || 'N/A'}","${s.amount}"\n`;
+      let dateStr = 'N/A';
+      if (s.date) {
+        try { dateStr = format(parseISO(s.date), 'yyyy-MM-dd'); } catch(e) {}
+      }
+      csvContent += `"${s.userName}","${dateStr}","${s.planName || 'N/A'}","${s.amount}"\n`;
     });
     csvContent += "\n";
 
     // Expired Users Section
     csvContent += "EXPIRED USERS\nName,Expiry Date,Plan\n";
     currentMonthData.expiredThisMonth.forEach(u => {
-      csvContent += `"${u.name}","${format(parseISO(u.expiryDate), 'yyyy-MM-dd')}","${u.planName || 'N/A'}"\n`;
+      let dateStr = 'N/A';
+      if (u.expiryDate) {
+        try { dateStr = format(parseISO(u.expiryDate), 'yyyy-MM-dd'); } catch(e) {}
+      }
+      csvContent += `"${u.name}","${dateStr}","${u.planName || 'N/A'}"\n`;
     });
 
     const encodedUri = encodeURI(csvContent);
@@ -175,9 +194,14 @@ export function Analytics({ users, sales, expenses }: AnalyticsProps) {
       // Total users who were active at the START of this month
       // (Created before this month AND not expired before this month)
       const usersAtStart = users.filter(u => {
-        const created = parseISO(u.createdAt);
-        const expiry = parseISO(u.expiryDate);
-        return isBefore(created, startOfThisMonth) && isBefore(startOfThisMonth, expiry);
+        if (!u.createdAt || !u.expiryDate) return false;
+        try {
+          const created = parseISO(u.createdAt);
+          const expiry = parseISO(u.expiryDate);
+          return isBefore(created, startOfThisMonth) && isBefore(startOfThisMonth, expiry);
+        } catch (e) {
+          return false;
+        }
       }).length;
 
       const expiredInMonth = sales.filter(s => s.type === 'Expired' && isInMonth(s.date, month)).length;
@@ -472,7 +496,12 @@ export function Analytics({ users, sales, expenses }: AnalyticsProps) {
               <div key={u.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 group hover:border-blue-200 transition-all">
                 <div>
                   <p className="font-bold text-slate-700">{u.name}</p>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Joined: {format(parseISO(u.createdAt), 'MMM d, yyyy')}</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                    Joined: {(() => {
+                      if (!u.createdAt) return 'N/A';
+                      try { return format(parseISO(u.createdAt), 'MMM d, yyyy'); } catch(e) { return 'Invalid Date'; }
+                    })()}
+                  </p>
                 </div>
                 <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-1 rounded uppercase tracking-widest">NEW</span>
               </div>
@@ -493,7 +522,12 @@ export function Analytics({ users, sales, expenses }: AnalyticsProps) {
               <div key={s.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 group hover:border-orange-200 transition-all">
                 <div>
                   <p className="font-bold text-slate-700">{s.userName}</p>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Renewed: {format(parseISO(s.date), 'MMM d, yyyy')}</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                    Renewed: {(() => {
+                      if (!s.date) return 'N/A';
+                      try { return format(parseISO(s.date), 'MMM d, yyyy'); } catch(e) { return 'Invalid Date'; }
+                    })()}
+                  </p>
                 </div>
                 <span className="text-[10px] font-black text-orange-600 bg-orange-50 px-2 py-1 rounded uppercase tracking-widest">RENEWED</span>
               </div>
@@ -514,7 +548,12 @@ export function Analytics({ users, sales, expenses }: AnalyticsProps) {
               <div key={s.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 group hover:border-red-200 transition-all">
                 <div>
                   <p className="font-bold text-slate-700">{s.userName}</p>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Expired: {format(parseISO(s.date), 'MMM d, yyyy')}</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                    Expired: {(() => {
+                      if (!s.date) return 'N/A';
+                      try { return format(parseISO(s.date), 'MMM d, yyyy'); } catch(e) { return 'Invalid Date'; }
+                    })()}
+                  </p>
                 </div>
                 <span className="text-[10px] font-black text-red-600 bg-red-50 px-2 py-1 rounded uppercase tracking-widest">EXPIRED</span>
               </div>

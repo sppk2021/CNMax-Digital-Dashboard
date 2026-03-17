@@ -7,7 +7,11 @@ import {
   Download,
   ArrowUpRight,
   ArrowDownRight,
-  RefreshCw
+  RefreshCw,
+  X,
+  User,
+  FileText,
+  Tag
 } from 'lucide-react';
 import { cn } from '../utils';
 import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
@@ -19,6 +23,7 @@ interface SaleListProps {
 export function SaleList({ sales }: SaleListProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<'All' | 'New' | 'Renewal' | 'Expired'>('All');
+  const [selectedSale, setSelectedSale] = useState<any | null>(null);
 
   const filteredSales = sales.filter(sale => {
     const matchesSearch = sale.userName.toLowerCase().includes(searchTerm.toLowerCase());
@@ -29,7 +34,7 @@ export function SaleList({ sales }: SaleListProps) {
   const totalRevenue = filteredSales.reduce((acc, s) => acc + s.amount, 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-3xl font-bold text-slate-800 mb-2">Events & Sales History</h2>
@@ -89,19 +94,30 @@ export function SaleList({ sales }: SaleListProps) {
             </thead>
             <tbody className="divide-y divide-slate-50">
               {filteredSales.map((sale) => (
-                <tr key={sale.id} className="hover:bg-slate-50/50 transition-colors group">
+                <tr 
+                  key={sale.id} 
+                  onClick={() => setSelectedSale(sale)}
+                  className="hover:bg-slate-50/50 transition-colors group cursor-pointer"
+                >
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-brand-sidebar/10 flex items-center justify-center text-brand-sidebar font-bold text-sm border border-brand-sidebar/5">
                         {sale.userName.charAt(0)}
                       </div>
-                      <p className="font-bold text-slate-700">{sale.userName}</p>
+                      <p className="font-bold text-slate-700 group-hover:text-brand-sidebar transition-colors">{sale.userName}</p>
                     </div>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2 text-sm text-slate-500">
                       <Calendar className="w-4 h-4 text-slate-300" />
-                      {format(parseISO(sale.date), 'MMM d, yyyy HH:mm')}
+                      {(() => {
+                        if (!sale.date) return 'N/A';
+                        try {
+                          return format(parseISO(sale.date), 'MMM d, yyyy HH:mm');
+                        } catch(e) {
+                          return 'Invalid Date';
+                        }
+                      })()}
                     </div>
                   </td>
                   <td className="px-6 py-4">
@@ -145,6 +161,125 @@ export function SaleList({ sales }: SaleListProps) {
           </div>
         )}
       </div>
+
+      {/* Sale Details Modal */}
+      {selectedSale && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-slate-50/50">
+              <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                <CircleDollarSign className="w-6 h-6 text-brand-sidebar" />
+                Sale Details
+              </h3>
+              <button 
+                onClick={() => setSelectedSale(null)}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-6">
+              <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                <div className="w-12 h-12 rounded-xl bg-brand-sidebar/10 flex items-center justify-center text-brand-sidebar font-bold text-lg border border-brand-sidebar/5">
+                  {selectedSale.userName.charAt(0)}
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Customer</p>
+                  <p className="text-lg font-bold text-slate-800">{selectedSale.userName}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                    <Tag className="w-3 h-3" /> Type
+                  </p>
+                  <span className={cn(
+                    "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold border uppercase tracking-wider",
+                    selectedSale.type === 'New' && "bg-blue-50 text-blue-600 border-blue-100",
+                    selectedSale.type === 'Renewal' && "bg-orange-50 text-orange-600 border-orange-100",
+                    selectedSale.type === 'Expired' && "bg-red-50 text-red-600 border-red-100"
+                  )}>
+                    {selectedSale.type}
+                  </span>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                    <CircleDollarSign className="w-3 h-3" /> Amount
+                  </p>
+                  <p className={cn(
+                    "text-lg font-black",
+                    selectedSale.type === 'Expired' ? "text-slate-400" : "text-emerald-600"
+                  )}>
+                    {selectedSale.amount.toLocaleString()} Ks
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-4 pt-4 border-t border-slate-100">
+                <div className="flex items-start gap-3">
+                  <Calendar className="w-4 h-4 text-slate-400 mt-0.5" />
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Date & Time</p>
+                    <p className="text-sm font-medium text-slate-700">
+                      {(() => {
+                        if (!selectedSale.date) return 'N/A';
+                        try {
+                          return format(parseISO(selectedSale.date), 'MMMM d, yyyy HH:mm');
+                        } catch(e) {
+                          return 'Invalid Date';
+                        }
+                      })()}
+                    </p>
+                  </div>
+                </div>
+
+                {selectedSale.planName && (
+                  <div className="flex items-start gap-3">
+                    <Tag className="w-4 h-4 text-slate-400 mt-0.5" />
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Plan</p>
+                      <p className="text-sm font-medium text-slate-700">{selectedSale.planName}</p>
+                    </div>
+                  </div>
+                )}
+
+                {selectedSale.notes && (
+                  <div className="flex items-start gap-3">
+                    <FileText className="w-4 h-4 text-slate-400 mt-0.5" />
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Notes</p>
+                      <p className="text-sm font-medium text-slate-700 bg-slate-50 p-3 rounded-xl border border-slate-100 mt-1">
+                        {selectedSale.notes}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                
+                <div className="flex items-start gap-3">
+                  <User className="w-4 h-4 text-slate-400 mt-0.5" />
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">User ID Reference</p>
+                    <p className="text-xs font-mono text-slate-500 bg-slate-50 px-2 py-1 rounded-md border border-slate-100 mt-1">
+                      {selectedSale.userId}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="p-6 bg-slate-50/50 border-t border-slate-100 flex justify-end">
+              <button 
+                onClick={() => setSelectedSale(null)}
+                className="px-6 py-2.5 bg-white border border-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-50 transition-colors shadow-sm"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

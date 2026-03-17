@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { collection, addDoc, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { getStatus, handleFirestoreError, OperationType, getNow } from '../utils';
+import { parseISO } from 'date-fns';
 
 interface MaintenanceManagerProps {
   users: any[];
@@ -27,11 +28,15 @@ export function MaintenanceManager({ users, sales }: MaintenanceManagerProps) {
 
             // 2. Check if an EXPIRED event already exists for this expiry cycle
             // We look for any 'Expired' event for this user that happened after their expiry date
-            const hasExpiredEvent = sales.some(s => 
-              s.userId === user.id && 
-              s.type === 'Expired' && 
-              new Date(s.date) >= new Date(user.expiryDate)
-            );
+            const hasExpiredEvent = sales.some(s => {
+              if (s.userId !== user.id || s.type !== 'Expired') return false;
+              if (!s.date || !user.expiryDate) return false;
+              try {
+                return parseISO(s.date) >= parseISO(user.expiryDate);
+              } catch (e) {
+                return false;
+              }
+            });
 
             if (!hasExpiredEvent) {
               // 3. Log EXPIRED event

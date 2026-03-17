@@ -201,7 +201,14 @@ export function ExpenseList({ expenses }: ExpenseListProps) {
                   <td className="px-8 py-6">
                     <div className="flex items-center gap-2 text-slate-500 text-sm">
                       <Calendar className="w-4 h-4" />
-                      {format(parseISO(expense.date), 'MMM dd, yyyy')}
+                      {(() => {
+                        if (!expense.date) return 'N/A';
+                        try {
+                          return format(parseISO(expense.date), 'MMM dd, yyyy');
+                        } catch (e) {
+                          return 'Invalid Date';
+                        }
+                      })()}
                     </div>
                   </td>
                   <td className="px-8 py-6 text-right">

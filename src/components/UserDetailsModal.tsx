@@ -16,32 +16,58 @@ export function UserDetailsModal({ isOpen, onClose, user, sales }: UserDetailsMo
 
   const userSales = sales
     .filter(s => s.userId === user.id)
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    .sort((a, b) => {
+      if (!a.date || !b.date) return 0;
+      try {
+        return parseISO(b.date).getTime() - parseISO(a.date).getTime();
+      } catch (e) {
+        return 0;
+      }
+    });
 
   const status = getStatus(user.expiryDate, user.subscriptionStartDate);
 
   const exportToCSV = () => {
+    let startDateStr = 'N/A';
+    if (user.subscriptionStartDate) {
+      try { startDateStr = format(parseISO(user.subscriptionStartDate), 'yyyy-MM-dd'); } catch(e) {}
+    }
+    let expiryDateStr = 'N/A';
+    if (user.expiryDate) {
+      try { expiryDateStr = format(parseISO(user.expiryDate), 'yyyy-MM-dd'); } catch(e) {}
+    }
+    let createdAtStr = 'N/A';
+    if (user.createdAt) {
+      try { createdAtStr = format(parseISO(user.createdAt), 'yyyy-MM-dd HH:mm:ss'); } catch(e) {}
+    }
+
     const userData = [
       ["User Details Report"],
       ["Name", user.name],
       ["ID", user.id],
       ["Status", status],
-      ["Start Date", format(parseISO(user.subscriptionStartDate), 'yyyy-MM-dd')],
-      ["Expiry Date", format(parseISO(user.expiryDate), 'yyyy-MM-dd')],
+      ["Start Date", startDateStr],
+      ["Expiry Date", expiryDateStr],
       ["Plan", user.planName || 'N/A'],
-      ["Created At", format(parseISO(user.createdAt), 'yyyy-MM-dd HH:mm:ss')],
+      ["Created At", createdAtStr],
       [],
       ["Sales History"],
       ["Sale ID", "Date", "Type", "Plan", "Amount (Ks)"]
     ];
 
-    const salesData = userSales.map(s => [
-      s.id,
-      format(parseISO(s.date), 'yyyy-MM-dd HH:mm:ss'),
-      s.type,
-      s.planName,
-      s.amount
-    ]);
+    const salesData = userSales.map(s => {
+      let saleDateStr = 'N/A';
+      if (s.date) {
+        try { saleDateStr = format(parseISO(s.date), 'yyyy-MM-dd HH:mm:ss'); } catch(e) {}
+      }
+      return [
+        s.id,
+        saleDateStr,
+        s.type,
+        s.planName,
+        s.amount
+      ];
+    });
 
     const csvContent = [
       ...userData.map(row => row.map(cell => `"${cell}"`).join(",")),
@@ -110,7 +136,16 @@ export function UserDetailsModal({ isOpen, onClose, user, sales }: UserDetailsMo
                     <Calendar className="w-3 h-3" />
                     Start Date
                   </div>
-                  <p className="text-white font-medium">{format(parseISO(user.subscriptionStartDate), 'MMM d, yyyy')}</p>
+                  <p className="text-white font-medium">
+                    {(() => {
+                      if (!user.subscriptionStartDate) return 'N/A';
+                      try {
+                        return format(parseISO(user.subscriptionStartDate), 'MMM d, yyyy');
+                      } catch (e) {
+                        return 'Invalid Date';
+                      }
+                    })()}
+                  </p>
                 </div>
                 <div className="bg-white/5 p-4 rounded-xl border border-white/5">
                   <div className="flex items-center gap-2 text-gray-400 text-xs uppercase tracking-wider font-semibold mb-2">
@@ -121,7 +156,14 @@ export function UserDetailsModal({ isOpen, onClose, user, sales }: UserDetailsMo
                     "font-medium",
                     status === 'Expired' ? "text-red-400" : "text-white"
                   )}>
-                    {format(parseISO(user.expiryDate), 'MMM d, yyyy')}
+                    {(() => {
+                      if (!user.expiryDate) return 'N/A';
+                      try {
+                        return format(parseISO(user.expiryDate), 'MMM d, yyyy');
+                      } catch (e) {
+                        return 'Invalid Date';
+                      }
+                    })()}
                   </p>
                 </div>
               </div>
@@ -145,7 +187,16 @@ export function UserDetailsModal({ isOpen, onClose, user, sales }: UserDetailsMo
                           </div>
                           <div>
                             <p className="font-medium text-white">{sale.planName}</p>
-                            <p className="text-xs text-gray-500">{sale.type} • {format(parseISO(sale.date), 'MMM d, yyyy')}</p>
+                            <p className="text-xs text-gray-500">
+                              {sale.type} • {(() => {
+                                if (!sale.date) return 'N/A';
+                                try {
+                                  return format(parseISO(sale.date), 'MMM d, yyyy');
+                                } catch (e) {
+                                  return 'Invalid Date';
+                                }
+                              })()}
+                            </p>
                           </div>
                         </div>
                         <div className="text-right">

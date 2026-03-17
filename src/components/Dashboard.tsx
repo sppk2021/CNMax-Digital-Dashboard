@@ -91,8 +91,13 @@ export function Dashboard({ users, sales, expenses, setActiveTab }: DashboardPro
   const activeUsers = users.filter(u => getStatus(u.expiryDate, u.subscriptionStartDate) === 'Active');
   const expiredUsers = users.filter(u => getStatus(u.expiryDate, u.subscriptionStartDate) === 'Expired');
   const expiringSoon = users.filter(u => {
-    const expiry = parseISO(u.expiryDate);
-    return getStatus(u.expiryDate, u.subscriptionStartDate) === 'Active' && isBefore(expiry, threeDaysFromNow);
+    if (!u.expiryDate) return false;
+    try {
+      const expiry = parseISO(u.expiryDate);
+      return getStatus(u.expiryDate, u.subscriptionStartDate) === 'Active' && isBefore(expiry, threeDaysFromNow);
+    } catch (e) {
+      return false;
+    }
   });
   
   const newUsersThisMonth = users.filter(u => isInMonth(u.createdAt, currentMonth));
@@ -104,7 +109,14 @@ export function Dashboard({ users, sales, expenses, setActiveTab }: DashboardPro
 
   // Monthly Comparison Metrics
   const expiredEventsThisMonth = sales.filter(s => s.type === 'Expired' && isInMonth(s.date, currentMonth));
-  const prevMonthTotalUsers = users.filter(u => isBefore(parseISO(u.createdAt), currentMonth)).length;
+  const prevMonthTotalUsers = users.filter(u => {
+    if (!u.createdAt) return false;
+    try {
+      return isBefore(parseISO(u.createdAt), currentMonth);
+    } catch (e) {
+      return false;
+    }
+  }).length;
   const netChange = newUsersThisMonth.length - expiredEventsThisMonth.length;
 
   // Revenue Breakdown by Plan
@@ -418,7 +430,15 @@ export function Dashboard({ users, sales, expenses, setActiveTab }: DashboardPro
                   <div>
                     <p className="text-sm font-bold text-slate-700">{user.name}</p>
                     <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">
-                      {Math.ceil((new Date(user.expiryDate).getTime() - now.getTime()) / (1000 * 60 * 60 * 24))} days left
+                      {(() => {
+                        if (!user.expiryDate) return 'N/A';
+                        try {
+                          const expiryDate = parseISO(user.expiryDate);
+                          return `${Math.ceil((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))} days left`;
+                        } catch (e) {
+                          return 'Invalid Date';
+                        }
+                      })()}
                     </p>
                   </div>
                   <button
@@ -469,7 +489,16 @@ export function Dashboard({ users, sales, expenses, setActiveTab }: DashboardPro
                     </div>
                     <div>
                       <p className="text-sm font-bold text-slate-700">{sale.userName}</p>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{sale.type} • {format(parseISO(sale.date), 'MMM d')}</p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                        {sale.type} • {(() => {
+                          if (!sale.date) return 'N/A';
+                          try {
+                            return format(parseISO(sale.date), 'MMM d');
+                          } catch (e) {
+                            return 'Invalid Date';
+                          }
+                        })()}
+                      </p>
                     </div>
                   </div>
                   <p className="text-sm font-black text-emerald-600">+{sale.amount.toLocaleString()}</p>

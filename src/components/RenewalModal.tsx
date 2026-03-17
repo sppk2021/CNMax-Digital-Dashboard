@@ -28,7 +28,15 @@ export function RenewalModal({ isOpen, onClose, user, plans }: RenewalModalProps
 
     setLoading(true);
     try {
-      const currentExpiry = parseISO(user.expiryDate);
+      let currentExpiry = new Date();
+      if (user.expiryDate) {
+        try {
+          currentExpiry = parseISO(user.expiryDate);
+        } catch (e) {
+          console.error("Invalid expiry date, using current date");
+        }
+      }
+      
       const now = new Date();
       // If already expired, start from now. If active, extend from expiry.
       const baseDate = getStatus(user.expiryDate, user.subscriptionStartDate) === 'Expired' ? now : currentExpiry;

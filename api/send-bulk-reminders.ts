@@ -30,7 +30,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         html: `
           <h1>Subscription Expiring Notice</h1>
           <p>Hi ${user.name},</p>
-          <p>This is a friendly reminder that your subscription is set to expire on <strong>${new Date(user.expiryDate).toLocaleDateString()}</strong>.</p>
+          <p>This is a friendly reminder that your subscription is set to expire on <strong>${(() => {
+            try { return new Date(user.expiryDate).toLocaleDateString(); } catch(e) { return 'soon'; }
+          })()}</strong>.</p>
           <p>Please renew your subscription to continue enjoying our services.</p>
           <br/>
           <p>Best regards,<br/>Subscription Management Team</p>

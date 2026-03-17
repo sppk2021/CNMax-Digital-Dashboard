@@ -636,7 +636,14 @@ export function ServerManagement({ servers }: ServerManagementProps) {
                           <span className="text-sm font-bold text-slate-600">Last Checked</span>
                         </div>
                         <span className="text-sm font-medium text-slate-800">
-                          {selectedServer.lastCheckedAt ? format(parseISO(selectedServer.lastCheckedAt), 'MMM d, HH:mm') : 'Never'}
+                          {(() => {
+                            if (!selectedServer.lastCheckedAt) return 'Never';
+                            try {
+                              return format(parseISO(selectedServer.lastCheckedAt), 'MMM d, HH:mm');
+                            } catch (e) {
+                              return 'Invalid Date';
+                            }
+                          })()}
                         </span>
                       </div>
                       <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
@@ -645,7 +652,14 @@ export function ServerManagement({ servers }: ServerManagementProps) {
                           <span className="text-sm font-bold text-slate-600">Added On</span>
                         </div>
                         <span className="text-sm font-medium text-slate-800">
-                          {format(parseISO(selectedServer.createdAt), 'MMM d, yyyy')}
+                          {(() => {
+                            if (!selectedServer.createdAt) return 'N/A';
+                            try {
+                              return format(parseISO(selectedServer.createdAt), 'MMM d, yyyy');
+                            } catch (e) {
+                              return 'Invalid Date';
+                            }
+                          })()}
                         </span>
                       </div>
                     </div>
