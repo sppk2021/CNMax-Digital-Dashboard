@@ -6,8 +6,7 @@
 import React, { useEffect, useState } from 'react';
 import { 
   onAuthStateChanged, 
-  signInWithPopup, 
-  GoogleAuthProvider, 
+  signInWithEmailAndPassword,
   signOut,
   User as FirebaseUser
 } from 'firebase/auth';
@@ -19,7 +18,8 @@ import {
   doc,
   getDocFromServer,
   addDoc,
-  serverTimestamp
+  serverTimestamp,
+  setDoc
 } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import { Layout } from './components/Layout';
@@ -32,9 +32,8 @@ import { ExpenseList } from './components/ExpenseList';
 import { ServerManagement } from './components/ServerManagement';
 import { MaintenanceManager } from './components/MaintenanceManager';
 import { Settings } from './components/Settings';
-import { LogIn, LogOut, Loader2, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { LogIn, LogOut, Loader2, ShieldAlert, ShieldCheck, Mail, Lock } from 'lucide-react';
 import { handleFirestoreError, OperationType } from './utils';
-import { setDoc } from 'firebase/firestore';
 
 export default function App() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
@@ -46,6 +45,9 @@ export default function App() {
   const [plans, setPlans] = useState<any[]>([]);
   const [expenses, setExpenses] = useState<any[]>([]);
   const [servers, setServers] = useState<any[]>([]);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
@@ -76,7 +78,6 @@ export default function App() {
           addedBy: 'system'
         }).catch(e => {
           console.error("Bootstrap Admin Error:", e);
-          // If bootstrap fails, it's likely because they aren't the hardcoded admin
         });
         setIsAdmin(true);
       } else {
@@ -101,38 +102,32 @@ export default function App() {
     const serversQuery = query(collection(db, 'servers'), orderBy('createdAt', 'desc'));
 
     const unsubscribeUsers = onSnapshot(usersQuery, (snapshot) => {
-      console.log("Users updated:", snapshot.docs.length);
       setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     }, (error) => {
-      console.error("Firestore Error (users):", error);
       handleFirestoreError(error, OperationType.LIST, 'users');
     });
 
     const unsubscribeSales = onSnapshot(salesQuery, (snapshot) => {
       setSales(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     }, (error) => {
-      console.error("Firestore Error (sales):", error);
       handleFirestoreError(error, OperationType.LIST, 'sales');
     });
 
     const unsubscribePlans = onSnapshot(plansQuery, (snapshot) => {
       setPlans(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     }, (error) => {
-      console.error("Firestore Error (plans):", error);
       handleFirestoreError(error, OperationType.LIST, 'plans');
     });
 
     const unsubscribeExpenses = onSnapshot(expensesQuery, (snapshot) => {
       setExpenses(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     }, (error) => {
-      console.error("Firestore Error (expenses):", error);
       handleFirestoreError(error, OperationType.LIST, 'expenses');
     });
 
     const unsubscribeServers = onSnapshot(serversQuery, (snapshot) => {
       setServers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     }, (error) => {
-      console.error("Firestore Error (servers):", error);
       handleFirestoreError(error, OperationType.LIST, 'servers');
     });
 
@@ -157,12 +152,14 @@ export default function App() {
     };
   }, [user, isAdmin]);
 
-  const handleLogin = async () => {
-    const provider = new GoogleAuthProvider();
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError('');
     try {
-      await signInWithPopup(auth, provider);
+      await signInWithEmailAndPassword(auth, email, password);
     } catch (error) {
       console.error("Login Error:", error);
+      setLoginError('Invalid email or password.');
     }
   };
 
@@ -198,19 +195,43 @@ export default function App() {
             />
           </div>
           <h1 className="text-3xl font-bold text-slate-800 mb-3">Welcome Back</h1>
-          <p className="text-slate-500 mb-10 leading-relaxed">Sign in with your authorized Google account to access the management dashboard.</p>
-          <button
-            onClick={handleLogin}
-            className="w-full flex items-center justify-center gap-3 bg-brand-sidebar hover:bg-brand-blue text-white font-bold py-4 px-6 rounded-2xl transition-all duration-300 shadow-xl shadow-brand-sidebar/20 group"
-          >
-            <LogIn className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            Sign in with Google
-          </button>
+          <p className="text-slate-500 mb-10 leading-relaxed">Sign in with your credentials to access the management dashboard.</p>
+          
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div className="relative">
+              <Mail className="absolute left-4 top-4 w-5 h-5 text-slate-400" />
+              <input
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full pl-12 pr-4 py-4 bg-slate-50 rounded-2xl border border-slate-200 focus:border-brand-sidebar focus:ring-2 focus:ring-brand-sidebar/20 outline-none transition-all"
+                required
+              />
+            </div>
+            <div className="relative">
+              <Lock className="absolute left-4 top-4 w-5 h-5 text-slate-400" />
+              <input
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full pl-12 pr-4 py-4 bg-slate-50 rounded-2xl border border-slate-200 focus:border-brand-sidebar focus:ring-2 focus:ring-brand-sidebar/20 outline-none transition-all"
+                required
+              />
+            </div>
+            {loginError && <p className="text-red-500 text-sm">{loginError}</p>}
+            <button
+              type="submit"
+              className="w-full flex items-center justify-center gap-3 bg-brand-sidebar hover:bg-brand-blue text-white font-bold py-4 px-6 rounded-2xl transition-all duration-300 shadow-xl shadow-brand-sidebar/20 group"
+            >
+              <LogIn className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              Sign In
+            </button>
+          </form>
           
           <div className="mt-12 pt-8 border-t border-slate-100 flex items-center justify-center gap-6 opacity-40 grayscale">
-            <span className="text-[10px] font-bold uppercase tracking-widest">Facebook</span>
-            <span className="text-[10px] font-bold uppercase tracking-widest">Twitter</span>
-            <span className="text-[10px] font-bold uppercase tracking-widest">Google</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest">Secure Access</span>
           </div>
         </div>
       </div>
