@@ -28,6 +28,7 @@ export function ExpenseList({ expenses }: ExpenseListProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [editingExpense, setEditingExpense] = useState<any>(null);
+  const [expenseToDelete, setExpenseToDelete] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -76,10 +77,15 @@ export function ExpenseList({ expenses }: ExpenseListProps) {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this expense?')) {
+  const handleDelete = (id: string) => {
+    setExpenseToDelete(id);
+  };
+
+  const confirmDelete = async () => {
+    if (expenseToDelete) {
       try {
-        await deleteDoc(doc(db, 'expenses', id));
+        await deleteDoc(doc(db, 'expenses', expenseToDelete));
+        setExpenseToDelete(null);
       } catch (error) {
         console.error("Error deleting expense:", error);
       }
@@ -338,6 +344,38 @@ export function ExpenseList({ expenses }: ExpenseListProps) {
                 {editingExpense ? 'Update Expense' : 'Save Expense'}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Delete Confirmation Modal */}
+      {expenseToDelete && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setExpenseToDelete(null)} />
+          <div className="relative bg-white w-full max-w-md rounded-[2.5rem] p-10 shadow-2xl animate-in fade-in zoom-in duration-200">
+            <div className="flex flex-col items-center text-center space-y-4">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-2">
+                <Trash2 className="w-8 h-8 text-red-500" />
+              </div>
+              <h3 className="text-2xl font-bold text-slate-800">Delete Expense?</h3>
+              <p className="text-slate-500">
+                Are you sure you want to permanently delete this expense? This action cannot be undone.
+              </p>
+              
+              <div className="flex gap-4 w-full mt-6">
+                <button 
+                  onClick={() => setExpenseToDelete(null)}
+                  className="flex-1 px-6 py-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={confirmDelete}
+                  className="flex-1 px-6 py-4 bg-red-500 hover:bg-red-600 text-white font-bold rounded-2xl transition-colors shadow-lg shadow-red-500/20"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
