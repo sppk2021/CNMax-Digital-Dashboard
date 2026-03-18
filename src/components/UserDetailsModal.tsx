@@ -88,55 +88,55 @@ export function UserDetailsModal({ isOpen, onClose, user, sales }: UserDetailsMo
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="bg-[#111111] w-full max-w-2xl rounded-2xl border border-white/10 overflow-hidden shadow-2xl"
+            className="bg-white w-full max-w-2xl rounded-[2.5rem] border border-slate-100 overflow-hidden shadow-2xl"
           >
             {/* Header */}
-            <div className="relative h-32 bg-gradient-to-r from-orange-500/20 to-purple-500/20 flex items-end p-6">
+            <div className="relative h-32 bg-gradient-to-r from-brand-sidebar/10 to-brand-blue/10 flex items-end p-8">
               <button 
                 onClick={onClose}
-                className="absolute top-4 right-4 p-2 bg-black/40 hover:bg-black/60 rounded-full transition-colors text-white"
+                className="absolute top-6 right-6 p-2 bg-white/50 hover:bg-white/80 rounded-full transition-colors text-slate-600"
               >
                 <X className="w-5 h-5" />
               </button>
               <div className="flex items-center gap-4">
-                <div className="w-20 h-20 rounded-2xl bg-[#111111] border-4 border-[#111111] shadow-xl flex items-center justify-center text-3xl font-bold text-orange-500">
+                <div className="w-20 h-20 rounded-2xl bg-white border-4 border-white shadow-xl flex items-center justify-center text-3xl font-bold text-brand-sidebar">
                   {user.name.charAt(0)}
                 </div>
                 <div className="mb-2">
-                  <h2 className="text-2xl font-bold text-white">{user.name}</h2>
-                  <p className="text-gray-400 text-sm">ID: {user.id}</p>
+                  <h2 className="text-2xl font-bold text-slate-800">{user.name}</h2>
+                  <p className="text-slate-500 text-sm font-medium">ID: {user.id}</p>
                 </div>
               </div>
             </div>
 
-            <div className="p-6 space-y-8">
+            <div className="p-8 space-y-8">
               {/* Subscription Info */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-white/5 p-4 rounded-xl border border-white/5">
-                  <div className="flex items-center gap-2 text-gray-400 text-xs uppercase tracking-wider font-semibold mb-2">
-                    <User className="w-3 h-3" />
+                <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
+                  <div className="flex items-center gap-2 text-slate-400 text-xs uppercase tracking-widest font-bold mb-3">
+                    <User className="w-4 h-4" />
                     Status
                   </div>
                   <span className={cn(
-                    "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border",
-                    status === 'Active' && "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
-                    status === 'Expired' && "bg-red-500/10 text-red-500 border-red-500/20",
-                    status === 'Upcoming' && "bg-blue-500/10 text-blue-500 border-blue-500/20"
+                    "inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border",
+                    status === 'Active' && "bg-emerald-100 text-emerald-600 border-emerald-200",
+                    status === 'Expired' && "bg-red-100 text-red-600 border-red-200",
+                    status === 'Upcoming' && "bg-blue-100 text-blue-600 border-blue-200"
                   )}>
                     {status}
                   </span>
                 </div>
-                <div className="bg-white/5 p-4 rounded-xl border border-white/5">
-                  <div className="flex items-center gap-2 text-gray-400 text-xs uppercase tracking-wider font-semibold mb-2">
-                    <Calendar className="w-3 h-3" />
+                <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
+                  <div className="flex items-center gap-2 text-slate-400 text-xs uppercase tracking-widest font-bold mb-3">
+                    <Calendar className="w-4 h-4" />
                     Start Date
                   </div>
-                  <p className="text-white font-medium">
+                  <p className="text-slate-800 font-bold">
                     {(() => {
                       if (!user.subscriptionStartDate) return 'N/A';
                       try {
@@ -147,14 +147,14 @@ export function UserDetailsModal({ isOpen, onClose, user, sales }: UserDetailsMo
                     })()}
                   </p>
                 </div>
-                <div className="bg-white/5 p-4 rounded-xl border border-white/5">
-                  <div className="flex items-center gap-2 text-gray-400 text-xs uppercase tracking-wider font-semibold mb-2">
-                    <Clock className="w-3 h-3" />
+                <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
+                  <div className="flex items-center gap-2 text-slate-400 text-xs uppercase tracking-widest font-bold mb-3">
+                    <Clock className="w-4 h-4" />
                     Expiry Date
                   </div>
                   <p className={cn(
-                    "font-medium",
-                    status === 'Expired' ? "text-red-400" : "text-white"
+                    "font-bold",
+                    status === 'Expired' ? "text-red-500" : "text-slate-800"
                   )}>
                     {(() => {
                       if (!user.expiryDate) return 'N/A';
@@ -170,24 +170,24 @@ export function UserDetailsModal({ isOpen, onClose, user, sales }: UserDetailsMo
 
               {/* Sales History */}
               <div>
-                <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                  <History className="w-5 h-5 text-orange-500" />
+                <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                  <History className="w-5 h-5 text-brand-sidebar" />
                   Recent Sales History
                 </h3>
                 <div className="space-y-3 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
                   {userSales.length > 0 ? (
                     userSales.map((sale) => (
-                      <div key={sale.id} className="flex items-center justify-between p-4 bg-white/[0.02] rounded-xl border border-white/5 hover:bg-white/[0.04] transition-colors">
+                      <div key={sale.id} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all">
                         <div className="flex items-center gap-4">
                           <div className={cn(
-                            "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold",
-                            sale.type === 'New' ? "bg-blue-500/20 text-blue-500" : "bg-orange-500/20 text-orange-500"
+                            "w-12 h-12 rounded-xl flex items-center justify-center text-sm font-bold",
+                            sale.type === 'New' ? "bg-blue-50 text-blue-600" : "bg-brand-sidebar/10 text-brand-sidebar"
                           )}>
                             {sale.type === 'New' ? 'N' : 'R'}
                           </div>
                           <div>
-                            <p className="font-medium text-white">{sale.planName}</p>
-                            <p className="text-xs text-gray-500">
+                            <p className="font-bold text-slate-800">{sale.planName}</p>
+                            <p className="text-xs text-slate-500 font-medium mt-0.5">
                               {sale.type} • {(() => {
                                 if (!sale.date) return 'N/A';
                                 try {
@@ -200,34 +200,34 @@ export function UserDetailsModal({ isOpen, onClose, user, sales }: UserDetailsMo
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="font-bold text-emerald-500">+{sale.amount.toLocaleString()} Ks</p>
-                          <p className="text-[10px] text-gray-600 uppercase tracking-tighter">{sale.id.slice(0, 8)}</p>
+                          <p className="font-bold text-emerald-600">+{sale.amount.toLocaleString()} Ks</p>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">{sale.id.slice(0, 8)}</p>
                         </div>
                       </div>
                     ))
                   ) : (
-                    <div className="text-center py-10 bg-white/[0.02] rounded-xl border border-dashed border-white/10">
-                      <DollarSign className="w-8 h-8 text-gray-700 mx-auto mb-2" />
-                      <p className="text-gray-500 text-sm">No sales history found for this user.</p>
+                    <div className="text-center py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                      <DollarSign className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+                      <p className="text-slate-500 font-medium">No sales history found for this user.</p>
                     </div>
                   )}
                 </div>
               </div>
             </div>
 
-            <div className="p-6 bg-white/[0.02] border-t border-white/5 flex justify-end gap-3">
+            <div className="p-8 bg-slate-50 border-t border-slate-100 flex justify-end gap-4">
+              <button
+                onClick={onClose}
+                className="px-6 py-3 bg-white hover:bg-slate-100 border border-slate-200 rounded-2xl text-slate-700 transition-colors font-bold"
+              >
+                Close
+              </button>
               <button
                 onClick={exportToCSV}
-                className="flex items-center gap-2 px-6 py-2 bg-orange-500 hover:bg-orange-600 rounded-xl text-white transition-all text-sm font-bold shadow-lg shadow-orange-500/20"
+                className="flex items-center gap-2 px-6 py-3 bg-brand-sidebar hover:bg-brand-blue rounded-2xl text-white transition-all font-bold shadow-lg shadow-brand-sidebar/20"
               >
                 <Download className="w-4 h-4" />
                 Export Report
-              </button>
-              <button
-                onClick={onClose}
-                className="px-6 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-white transition-colors text-sm font-medium"
-              >
-                Close
               </button>
             </div>
           </motion.div>

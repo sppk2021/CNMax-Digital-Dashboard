@@ -91,34 +91,34 @@ export function RenewalModal({ isOpen, onClose, user, plans }: RenewalModalProps
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-md bg-[#1a1a1a] rounded-2xl border border-white/10 shadow-2xl overflow-hidden">
-        <div className="flex items-center justify-between p-6 border-b border-white/5">
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-md bg-white rounded-[2.5rem] border border-slate-100 shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+        <div className="flex items-center justify-between p-8 border-b border-slate-100">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-orange-500/10 rounded-lg">
-              <RefreshCw className="w-5 h-5 text-orange-500" />
+            <div className="p-3 bg-brand-sidebar/10 rounded-xl">
+              <RefreshCw className="w-6 h-6 text-brand-sidebar" />
             </div>
-            <h3 className="text-xl font-bold">Renew Subscription</h3>
+            <h3 className="text-2xl font-bold text-slate-800">Renew Subscription</h3>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-lg transition-colors">
-            <X className="w-5 h-5" />
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+            <X className="w-6 h-6 text-slate-400" />
           </button>
         </div>
 
-        <form onSubmit={handleRenew} className="p-6 space-y-6">
+        <form onSubmit={handleRenew} className="p-8 space-y-6">
           <div>
-            <p className="text-sm text-gray-400 mb-4">
-              Renewing subscription for <span className="text-white font-bold">{user.name}</span>.
+            <p className="text-sm text-slate-500 mb-6">
+              Renewing subscription for <span className="text-slate-800 font-bold">{user.name}</span>.
             </p>
 
-            <div className="flex gap-2 mb-6">
+            <div className="flex gap-2 mb-6 bg-slate-50 p-1 rounded-xl border border-slate-100">
               <button
                 type="button"
                 onClick={() => setRenewalMode('plan')}
-                className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
+                className={`flex-1 py-2 px-4 rounded-lg text-sm font-bold transition-all ${
                   renewalMode === 'plan' 
-                    ? 'bg-orange-500 text-white' 
-                    : 'bg-white/5 text-gray-400 hover:bg-white/10'
+                    ? 'bg-white text-brand-sidebar shadow-sm' 
+                    : 'text-slate-500 hover:text-slate-700'
                 }`}
               >
                 Select Plan
@@ -126,10 +126,10 @@ export function RenewalModal({ isOpen, onClose, user, plans }: RenewalModalProps
               <button
                 type="button"
                 onClick={() => setRenewalMode('custom')}
-                className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
+                className={`flex-1 py-2 px-4 rounded-lg text-sm font-bold transition-all ${
                   renewalMode === 'custom' 
-                    ? 'bg-orange-500 text-white' 
-                    : 'bg-white/5 text-gray-400 hover:bg-white/10'
+                    ? 'bg-white text-brand-sidebar shadow-sm' 
+                    : 'text-slate-500 hover:text-slate-700'
                 }`}
               >
                 Custom Date
@@ -137,13 +137,13 @@ export function RenewalModal({ isOpen, onClose, user, plans }: RenewalModalProps
             </div>
 
             {renewalMode === 'plan' ? (
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">Select Renewal Plan</label>
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Select Renewal Plan</label>
                 <select
                   required={renewalMode === 'plan'}
                   value={selectedPlanId}
                   onChange={(e) => setSelectedPlanId(e.target.value)}
-                  className="w-full bg-[#111111] border border-white/5 rounded-xl py-3 px-4 focus:outline-none focus:border-orange-500/50 transition-colors text-white"
+                  className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-brand-sidebar/20 transition-all text-slate-800 appearance-none"
                 >
                   <option value="" disabled>Choose a plan...</option>
                   {plans.map(plan => (
@@ -153,34 +153,34 @@ export function RenewalModal({ isOpen, onClose, user, plans }: RenewalModalProps
                   ))}
                 </select>
                 {plans.length === 0 && (
-                  <p className="text-xs text-red-400 mt-2">No plans available. Please create a plan first.</p>
+                  <p className="text-xs text-red-500 mt-2 ml-1">No plans available. Please create a plan first.</p>
                 )}
               </div>
             ) : (
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">New Expiry Date</label>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">New Expiry Date</label>
                   <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                     <input
                       type="date"
                       required={renewalMode === 'custom'}
                       value={customDate}
                       onChange={(e) => setCustomDate(e.target.value)}
-                      className="w-full bg-[#111111] border border-white/5 rounded-xl py-3 pl-10 pr-4 focus:outline-none focus:border-orange-500/50 transition-colors text-white"
+                      className="w-full pl-12 pr-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-brand-sidebar/20 transition-all text-slate-800"
                     />
                   </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">Amount (Optional)</label>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Amount (Optional)</label>
                   <div className="relative">
-                    <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                    <CreditCard className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                     <input
                       type="number"
                       min="0"
                       value={customPrice}
                       onChange={(e) => setCustomPrice(Number(e.target.value))}
-                      className="w-full bg-[#111111] border border-white/5 rounded-xl py-3 pl-10 pr-4 focus:outline-none focus:border-orange-500/50 transition-colors text-white"
+                      className="w-full pl-12 pr-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-brand-sidebar/20 transition-all text-slate-800"
                     />
                   </div>
                 </div>
@@ -188,21 +188,21 @@ export function RenewalModal({ isOpen, onClose, user, plans }: RenewalModalProps
             )}
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-400 mb-2">Renewal Notes (Optional)</label>
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Renewal Notes (Optional)</label>
             <textarea 
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Payment confirmation, discount applied, etc."
               rows={3}
-              className="w-full bg-[#111111] border border-white/5 rounded-xl py-3 px-4 focus:outline-none focus:border-orange-500/50 transition-colors resize-none"
+              className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-brand-sidebar/20 transition-all resize-none text-slate-800"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading || (renewalMode === 'plan' && plans.length === 0)}
-            className="w-full flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg shadow-orange-500/20"
+            className="w-full flex items-center justify-center gap-2 bg-brand-sidebar hover:bg-brand-blue disabled:opacity-50 text-white font-bold py-4 px-6 rounded-2xl transition-all shadow-xl shadow-brand-sidebar/20 mt-4"
           >
             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Confirm Renewal'}
           </button>

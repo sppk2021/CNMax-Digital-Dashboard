@@ -20,6 +20,7 @@ export function PlanManagement({ plans }: PlanManagementProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   // Form state
   const [name, setName] = useState('');
@@ -61,16 +62,21 @@ export function PlanManagement({ plans }: PlanManagementProps) {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this plan?")) return;
+  const handleDeleteClick = (id: string) => {
+    setDeleteConfirmId(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteConfirmId) return;
     setLoading(true);
     try {
-      await deleteDoc(doc(db, 'plans', id))
-        .catch(e => handleFirestoreError(e, OperationType.DELETE, `plans/${id}`));
+      await deleteDoc(doc(db, 'plans', deleteConfirmId))
+        .catch(e => handleFirestoreError(e, OperationType.DELETE, `plans/${deleteConfirmId}`));
     } catch (error) {
       console.error("Failed to delete plan:", error);
     } finally {
       setLoading(false);
+      setDeleteConfirmId(null);
     }
   };
 
@@ -182,7 +188,7 @@ export function PlanManagement({ plans }: PlanManagementProps) {
                   <Edit2 className="w-5 h-5" />
                 </button>
                 <button 
-                  onClick={() => handleDelete(plan.id)}
+                  onClick={() => handleDeleteClick(plan.id)}
                   className="p-2.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"
                 >
                   <Trash2 className="w-5 h-5" />
@@ -205,6 +211,39 @@ export function PlanManagement({ plans }: PlanManagementProps) {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmId && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setDeleteConfirmId(null)} />
+          <div className="relative bg-white w-full max-w-md rounded-[2.5rem] overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200">
+            <div className="p-8 text-center">
+              <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                <AlertCircle className="w-10 h-10 text-red-500" />
+              </div>
+              <h3 className="text-2xl font-black text-slate-800 mb-2">Delete Plan?</h3>
+              <p className="text-slate-500 font-medium mb-8">
+                Are you sure you want to permanently delete this plan? This action cannot be undone.
+              </p>
+              <div className="flex gap-4">
+                <button
+                  onClick={() => setDeleteConfirmId(null)}
+                  className="flex-1 px-6 py-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  disabled={loading}
+                  className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white font-bold rounded-2xl shadow-lg shadow-red-500/20 transition-all"
+                >
+                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Delete'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
