@@ -1,6 +1,26 @@
-import { collection, addDoc, serverTimestamp, updateDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, updateDoc, doc, getDocs, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { subMonths, addDays } from 'date-fns';
+
+export const clearAllData = async () => {
+  console.log("clearAllData started");
+  try {
+    const collectionsToClear = ['users', 'servers', 'sales', 'expenses', 'plans'];
+    
+    for (const collectionName of collectionsToClear) {
+      console.log(`Clearing ${collectionName}...`);
+      const querySnapshot = await getDocs(collection(db, collectionName));
+      const deletePromises = querySnapshot.docs.map(docSnapshot => deleteDoc(doc(db, collectionName, docSnapshot.id)));
+      await Promise.all(deletePromises);
+      console.log(`${collectionName} cleared.`);
+    }
+    
+    console.log("All data cleared successfully.");
+  } catch (error) {
+    console.error("Error clearing data:", error);
+    throw error;
+  }
+};
 
 export const seedSampleData = async () => {
   console.log("seedSampleData started");

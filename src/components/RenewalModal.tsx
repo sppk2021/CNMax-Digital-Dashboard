@@ -63,6 +63,7 @@ export function RenewalModal({ isOpen, onClose, user, plans }: RenewalModalProps
         expiryDate: newExpiry.toISOString(),
         planName: planName,
         lastRenewedAt: now.toISOString(),
+        status: 'Active',
         notes: notes.trim() || (user.notes || '')
       }).catch(e => handleFirestoreError(e, OperationType.UPDATE, `users/${user.id}`));
 

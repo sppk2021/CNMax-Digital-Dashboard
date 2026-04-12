@@ -15,7 +15,9 @@ import {
   Bell,
   AlertTriangle,
   Info,
-  Clock
+  Clock,
+  Moon,
+  Sun
 } from 'lucide-react';
 import { cn } from '../utils';
 import { differenceInDays, parseISO } from 'date-fns';
@@ -28,9 +30,21 @@ interface LayoutProps {
   setActiveTab: (tab: any) => void;
   servers?: any[];
   users?: any[];
+  isDarkMode: boolean;
+  toggleDarkMode: () => void;
 }
 
-export function Layout({ children, user, onLogout, activeTab, setActiveTab, servers = [], users = [] }: LayoutProps) {
+export function Layout({ 
+  children, 
+  user, 
+  onLogout, 
+  activeTab, 
+  setActiveTab, 
+  servers = [], 
+  users = [],
+  isDarkMode,
+  toggleDarkMode
+}: LayoutProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [isMinimized, setIsMinimized] = React.useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -127,33 +141,40 @@ export function Layout({ children, user, onLogout, activeTab, setActiveTab, serv
   }
 
   return (
-    <div className="min-h-screen bg-brand-bg text-slate-900 flex flex-col md:flex-row">
+    <div className="min-h-screen bg-brand-bg text-brand-text flex flex-col md:flex-row transition-colors duration-300">
       {/* Sidebar */}
       <aside className={cn(
-        "fixed inset-y-0 left-0 z-50 bg-brand-sidebar transform transition-all duration-300 ease-in-out md:relative md:translate-x-0 rounded-r-3xl md:rounded-none",
-        isMobileMenuOpen ? "translate-x-0" : "-translate-x-full",
-        isMinimized ? "w-24" : "w-64"
+        "fixed inset-y-0 left-0 z-50 bg-brand-card transform transition-all duration-300 ease-in-out md:relative md:translate-x-0 border-r border-brand-border",
+        isMobileMenuOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full",
+        isMinimized ? "w-20" : "w-64"
       )}>
-        <div className="h-full flex flex-col py-8 pl-6 relative">
+        <div className="h-full flex flex-col py-6 px-4 relative">
           {/* Minimize Toggle */}
           <button 
             onClick={() => setIsMinimized(!isMinimized)}
-            className="hidden md:flex absolute -right-4 top-10 w-8 h-8 bg-white rounded-full border border-slate-200 items-center justify-center text-slate-500 hover:text-brand-sidebar shadow-sm z-50"
+            className="hidden md:flex absolute -right-3.5 top-8 w-7 h-7 bg-brand-card border border-brand-border rounded-full shadow-medium items-center justify-center text-brand-text-muted hover:text-brand-primary z-50 transition-all active:scale-90"
           >
-            {isMinimized ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+            {isMinimized ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
           </button>
 
-          <div className={cn("flex items-center gap-3 mb-12 px-2 text-white transition-all", isMinimized && "justify-center pr-6")}>
-            <img 
-              src="https://uploads.onecompiler.io/442aqr2uj/44gkkjfhk/CNMAXDIGITAL2.0.jpg" 
-              alt="Logo" 
-              className="h-10 rounded-lg object-contain bg-white p-1 min-w-[40px]"
-              referrerPolicy="no-referrer"
-            />
-            {!isMinimized && <span className="font-bold text-xl tracking-tight">CNMAX</span>}
+          <div className={cn("flex items-center gap-3 mb-10 px-2 transition-all", isMinimized && "justify-center")}>
+            <div className="w-10 h-10 rounded-xl bg-brand-primary flex items-center justify-center min-w-[40px] shadow-lg shadow-brand-primary/20">
+              <img 
+                src="https://uploads.onecompiler.io/442aqr2uj/44gkkjfhk/CNMAXDIGITAL2.0.jpg" 
+                alt="Logo" 
+                className="w-6 h-6 rounded-lg object-contain brightness-0 invert"
+                referrerPolicy="no-referrer"
+              />
+            </div>
+            {!isMinimized && (
+              <div className="overflow-hidden">
+                <span className="font-bold text-lg tracking-tight text-brand-text block truncate">CNMax Digital</span>
+                <p className="text-[10px] uppercase tracking-widest text-brand-text-muted font-bold truncate">Admin Panel</p>
+              </div>
+            )}
           </div>
 
-          <nav className="flex-1 space-y-3">
+          <nav className="flex-1 space-y-1">
             {navItems.map((item) => (
               <button
                 key={item.id}
@@ -162,24 +183,25 @@ export function Layout({ children, user, onLogout, activeTab, setActiveTab, serv
                   setIsMobileMenuOpen(false);
                 }}
                 className={cn(
-                  "w-full flex items-center gap-4 px-6 py-4 transition-all duration-200 group relative",
+                  "w-full flex items-center gap-3 px-3 py-2.5 transition-all duration-200 group relative",
                   activeTab === item.id 
-                    ? "bg-brand-bg text-brand-sidebar rounded-l-full font-bold shadow-sm" 
-                    : "text-white/70 hover:text-white hover:bg-white/5 rounded-l-full",
-                  isMinimized && "justify-center pr-6 rounded-full"
+                    ? "bg-brand-primary/10 text-brand-primary rounded-xl" 
+                    : "text-brand-text-muted hover:text-brand-text rounded-xl hover:bg-brand-primary/5",
+                  isMinimized && "justify-center px-0"
                 )}
               >
-                {activeTab === item.id && !isMinimized && (
-                  <div className="absolute right-0 top-0 bottom-0 w-2 bg-brand-bg" />
-                )}
                 <item.icon className={cn(
-                  "w-5 h-5 min-w-[20px]",
-                  activeTab === item.id ? "text-brand-sidebar" : "text-white/70 group-hover:text-white"
+                  "w-5 h-5 min-w-[20px] transition-colors",
+                  activeTab === item.id ? "text-brand-primary" : "text-brand-text-muted group-hover:text-brand-text"
                 )} />
-                {!isMinimized && <span className="text-sm tracking-wide">{item.label}</span>}
+                {!isMinimized && <span className="text-sm font-medium">{item.label}</span>}
                 
+                {activeTab === item.id && !isMinimized && (
+                  <div className="w-1 h-5 bg-brand-primary rounded-full ml-auto" />
+                )}
+
                 {isMinimized && (
-                  <div className="absolute left-full ml-4 px-3 py-2 bg-slate-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
+                  <div className="absolute left-full ml-4 px-3 py-2 bg-brand-card border border-brand-border shadow-2xl text-brand-text font-bold text-xs rounded-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
                     {item.label}
                   </div>
                 )}
@@ -187,98 +209,117 @@ export function Layout({ children, user, onLogout, activeTab, setActiveTab, serv
             ))}
           </nav>
 
-          <div className="mt-auto pt-6 pr-6">
-            <div className={cn("flex items-center gap-3 px-4 mb-8 text-white/90", isMinimized && "justify-center pr-0")}>
-              <img 
-                src={user.photoURL} 
-                alt={user.displayName} 
-                className="w-10 h-10 rounded-full border-2 border-white/20 min-w-[40px]"
-              />
+          <div className="mt-auto pt-6 border-t border-brand-border">
+            <div className={cn("flex items-center gap-3 rounded-2xl", isMinimized ? "justify-center" : "p-2 hover:bg-brand-primary/5 transition-colors")}>
+              <div className="relative">
+                {user.photoURL ? (
+                  <img 
+                    src={user.photoURL} 
+                    alt={user.displayName || user.email} 
+                    className="w-9 h-9 rounded-full min-w-[36px] object-cover border border-brand-border"
+                  />
+                ) : (
+                  <div className="w-9 h-9 rounded-full min-w-[36px] bg-brand-primary flex items-center justify-center text-white font-bold text-sm">
+                    {(user.displayName || user.email || 'U').charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-brand-card rounded-full"></div>
+              </div>
               {!isMinimized && (
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold truncate">{user.displayName}</p>
-                  <p className="text-[10px] opacity-60 truncate uppercase tracking-widest">{user.email}</p>
+                  <p className="text-xs font-bold text-brand-text truncate">{user.displayName || user.email?.split('@')[0]}</p>
+                  <p className="text-[10px] text-brand-text-muted truncate uppercase tracking-widest font-bold">Administrator</p>
                 </div>
               )}
             </div>
-            <button
+            <button 
               onClick={onLogout}
+              title="Logout"
               className={cn(
-                "w-full flex items-center gap-4 px-6 py-4 rounded-xl text-white/60 hover:text-white hover:bg-white/5 transition-colors",
-                isMinimized && "justify-center pr-6"
+                "w-full flex items-center gap-3 px-3 py-2.5 mt-2 text-red-500 hover:text-red-600 transition-colors rounded-xl hover:bg-red-500/10",
+                isMinimized && "justify-center"
               )}
             >
-              <LogOut className="w-5 h-5 min-w-[20px]" />
-              {!isMinimized && <span className="text-sm font-medium">Logout</span>}
+              <LogOut size={18} />
+              {!isMinimized && <span className="text-sm font-bold">Logout</span>}
             </button>
           </div>
         </div>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col min-w-0">
+      <main className="flex-1 flex flex-col min-w-0 bg-brand-bg">
         {/* Header */}
-        <header className="h-20 bg-brand-bg/80 backdrop-blur-md sticky top-0 z-40 flex items-center justify-between px-8 md:px-12">
+        <header className="h-20 bg-brand-card/80 backdrop-blur-md sticky top-0 z-40 flex items-center justify-between px-6 md:px-10 border-b border-brand-border">
           <div className="flex items-center gap-4 md:hidden">
-            <img 
-              src="https://uploads.onecompiler.io/442aqr2uj/44gkkjfhk/CNMAXDIGITAL2.0.jpg" 
-              alt="Logo" 
-              className="h-8 rounded object-contain"
-              referrerPolicy="no-referrer"
-            />
-            <span className="font-bold tracking-tight text-brand-sidebar">CNMAX</span>
+            <div className="w-10 h-10 rounded-xl bg-brand-primary flex items-center justify-center shadow-lg">
+              <img 
+                src="https://uploads.onecompiler.io/442aqr2uj/44gkkjfhk/CNMAXDIGITAL2.0.jpg" 
+                alt="Logo" 
+                className="h-6 rounded object-contain brightness-0 invert"
+                referrerPolicy="no-referrer"
+              />
+            </div>
           </div>
           
           <div className="hidden md:block">
-            <h1 className="text-2xl font-bold text-slate-800 capitalize">
+            <h1 className="text-lg font-bold text-brand-text tracking-tight">
               {navItems.find(i => i.id === activeTab)?.label || 'Dashboard'}
             </h1>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 md:gap-6">
+            <button 
+              onClick={toggleDarkMode}
+              className="p-2.5 bg-brand-bg rounded-xl border border-brand-border text-brand-text-muted hover:text-brand-primary transition-all active:scale-95"
+              title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            >
+              {isDarkMode ? <Sun className="w-4.5 h-4.5" /> : <Moon className="w-4.5 h-4.5" />}
+            </button>
+
             <button 
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="p-2 text-slate-500 hover:text-brand-sidebar md:hidden"
+              className="p-2.5 bg-brand-bg rounded-xl border border-brand-border text-brand-text-muted hover:text-brand-primary md:hidden active:scale-95 transition-all"
             >
-              {isMobileMenuOpen ? <X /> : <Menu />}
+              {isMobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
             </button>
             
             <div className="relative" ref={notificationRef}>
               <button 
                 onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
-                className="p-2 text-slate-500 hover:text-brand-sidebar hover:bg-slate-100 rounded-full transition-colors relative"
+                className="p-2.5 bg-brand-bg rounded-xl border border-brand-border text-brand-text-muted hover:text-brand-primary transition-all active:scale-95 relative"
               >
-                <Bell className="w-5 h-5" />
+                <Bell className="w-4.5 h-4.5" />
                 {notifications.length > 0 && (
-                  <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 border-2 border-brand-bg rounded-full"></span>
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 border border-brand-card rounded-full"></span>
                 )}
               </button>
 
               {isNotificationsOpen && (
-                <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                  <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-                    <h3 className="font-bold text-slate-800">Notifications</h3>
-                    <span className="text-xs font-bold bg-brand-sidebar/10 text-brand-sidebar px-2 py-1 rounded-full">
+                <div className="absolute right-0 mt-4 w-80 bg-brand-card rounded-2xl shadow-2xl border border-brand-border overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="p-4 border-b border-brand-border flex items-center justify-between bg-brand-bg/50">
+                    <h3 className="font-bold text-brand-text text-sm">Notifications</h3>
+                    <span className="text-[10px] font-bold bg-brand-primary/10 text-brand-primary px-2 py-0.5 rounded-full">
                       {notifications.length} New
                     </span>
                   </div>
                   <div className="max-h-96 overflow-y-auto custom-scrollbar">
                     {notifications.length === 0 ? (
-                      <div className="p-8 text-center text-slate-500">
-                        <Bell className="w-8 h-8 mx-auto mb-3 text-slate-300" />
+                      <div className="p-8 text-center text-brand-text-muted">
+                        <Bell className="w-8 h-8 mx-auto mb-3 opacity-20" />
                         <p className="text-sm font-medium">All caught up!</p>
-                        <p className="text-xs mt-1 text-slate-400">No critical events to report.</p>
+                        <p className="text-xs mt-1 opacity-70">No critical events to report.</p>
                       </div>
                     ) : (
-                      <div className="divide-y divide-slate-50">
+                      <div className="divide-y divide-brand-border">
                         {notifications.map((notif) => (
-                          <div key={notif.id} className="p-4 hover:bg-slate-50 transition-colors flex gap-3">
-                            <div className={cn("p-2 rounded-xl h-fit", notif.bg, notif.color)}>
+                          <div key={notif.id} className="p-4 hover:bg-brand-bg transition-colors flex gap-4">
+                            <div className={cn("p-2.5 rounded-xl h-fit", notif.bg, notif.color)}>
                               <notif.icon className="w-4 h-4" />
                             </div>
                             <div>
-                              <p className="text-sm font-bold text-slate-800">{notif.title}</p>
-                              <p className="text-xs text-slate-500 mt-0.5">{notif.message}</p>
+                              <p className="text-sm font-bold text-brand-text">{notif.title}</p>
+                              <p className="text-xs text-brand-text-muted mt-1 leading-relaxed">{notif.message}</p>
                             </div>
                           </div>
                         ))}
@@ -289,19 +330,24 @@ export function Layout({ children, user, onLogout, activeTab, setActiveTab, serv
               )}
             </div>
 
-            <div className="hidden md:flex items-center gap-3 bg-white px-4 py-2 rounded-full border border-slate-200 shadow-sm">
-              <div className={cn(
-                "w-2 h-2 rounded-full animate-pulse",
-                offlineServers.length > 0 ? "bg-red-500" : "bg-emerald-500"
-              )} />
-              <span className="text-xs font-medium text-slate-500">
-                {offlineServers.length > 0 ? 'System Issues' : 'System Online'}
-              </span>
+            <div className="hidden md:flex items-center gap-3 p-1 bg-brand-bg rounded-xl border border-brand-border">
+              {user.photoURL ? (
+                <img 
+                  src={user.photoURL} 
+                  alt={user.displayName} 
+                  className="w-7 h-7 rounded-lg object-cover"
+                />
+              ) : (
+                <div className="w-7 h-7 rounded-lg bg-brand-primary flex items-center justify-center text-white text-[10px] font-bold">
+                  {(user.displayName || user.email || 'U').charAt(0).toUpperCase()}
+                </div>
+              )}
+              <span className="text-xs font-bold pr-2 text-brand-text">{user.displayName || user.email?.split('@')[0]}</span>
             </div>
           </div>
         </header>
 
-        <div className="flex-1 p-8 md:p-12 overflow-auto custom-scrollbar">
+        <div className="flex-1 p-6 md:p-10 overflow-auto custom-scrollbar">
           {children}
         </div>
       </main>

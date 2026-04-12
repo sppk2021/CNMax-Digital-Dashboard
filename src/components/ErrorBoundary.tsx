@@ -38,16 +38,16 @@ export class ErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
-          <div className="max-w-md w-full bg-white rounded-[2rem] p-8 border border-red-100 shadow-2xl text-center">
-            <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
+        <div className="min-h-screen bg-brand-bg flex items-center justify-center p-6">
+          <div className="max-w-md w-full bg-white rounded-[2rem] p-8 border border-red-100 shadow-clay text-center">
+            <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6 shadow-clay-inset">
               <AlertTriangle className="w-8 h-8 text-red-500" />
             </div>
             <h2 className="text-xl font-bold text-slate-800 mb-2">Something went wrong</h2>
             <p className="text-slate-500 mb-8 text-sm">{errorMessage}</p>
             <button
               onClick={() => window.location.reload()}
-              className="w-full flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 px-6 rounded-2xl transition-all"
+              className="w-full flex items-center justify-center gap-2 bg-brand-bg hover:bg-brand-blue text-slate-700 font-bold py-3 px-6 rounded-2xl transition-all shadow-clay-sm hover:shadow-clay active:shadow-clay-active"
             >
               <RefreshCcw className="w-4 h-4" />
               Reload Application

@@ -12,7 +12,8 @@ import {
   CheckCircle2,
   Loader2,
   Receipt,
-  ExternalLink
+  ExternalLink,
+  Clock
 } from 'lucide-react';
 import { 
   AreaChart, 
@@ -24,7 +25,7 @@ import {
   ResponsiveContainer 
 } from 'recharts';
 import { cn, getStatus, isInMonth, getNow } from '../utils';
-import { seedSampleData } from '../utils/seedData';
+import { seedSampleData, clearAllData } from '../utils/seedData';
 import { startOfMonth, subMonths, addDays, isBefore, parseISO, format } from 'date-fns';
 
 interface DashboardProps {
@@ -142,14 +143,14 @@ export function Dashboard({ users, sales, expenses, setActiveTab }: DashboardPro
     const last12Months = Array.from({ length: 12 }).map((_, i) => subMonths(currentMonth, 11 - i));
     return last12Months.map(month => {
       const newInMonth = users.filter(u => isInMonth(u.createdAt, month)).length;
-      const expiredInMonth = users.filter(u => isInMonth(u.expiryDate, month)).length;
+      const expiredInMonth = sales.filter(s => s.type === 'Expired' && isInMonth(s.date, month)).length;
       return {
         name: format(month, 'MMM yy'),
         new: newInMonth,
         net: newInMonth - expiredInMonth,
       };
     });
-  }, [users, currentMonth]);
+  }, [users, sales, currentMonth]);
 
   const stats = [
     { 
@@ -157,183 +158,182 @@ export function Dashboard({ users, sales, expenses, setActiveTab }: DashboardPro
       value: activeUsers.length, 
       icon: Users, 
       color: 'text-emerald-500', 
-      bg: 'bg-emerald-500/10' 
+      bg: 'bg-emerald-500/10',
+      trend: '+12%'
     },
     { 
-      label: 'Net Profit (Month)', 
+      label: 'Net Profit', 
       value: `${netProfitThisMonth.toLocaleString()} Ks`, 
       icon: DollarSign, 
-      color: 'text-emerald-500', 
-      bg: 'bg-emerald-500/10' 
+      color: 'text-brand-primary', 
+      bg: 'bg-brand-primary/10',
+      trend: '+8.4%'
     },
     { 
-      label: 'New (This Month)', 
+      label: 'New Users', 
       value: newUsersThisMonth.length, 
       icon: UserPlus, 
       color: 'text-blue-500', 
-      bg: 'bg-blue-500/10' 
+      bg: 'bg-blue-500/10',
+      trend: '+5'
     },
     { 
-      label: 'Expenses (Month)', 
+      label: 'Monthly Expenses', 
       value: `${expensesThisMonth.toLocaleString()} Ks`, 
       icon: Receipt, 
       color: 'text-red-500', 
-      bg: 'bg-red-500/10' 
-    },
-    { 
-      label: 'Total Revenue', 
-      value: `${revenueThisMonth.toLocaleString()} Ks`, 
-      icon: DollarSign, 
-      color: 'text-emerald-500', 
-      bg: 'bg-emerald-500/10' 
-    },
-    { 
-      label: 'Projected Revenue', 
-      value: `${projectedRevenue.toLocaleString(undefined, { maximumFractionDigits: 0 })} Ks`, 
-      icon: TrendingUp, 
-      color: 'text-amber-500', 
-      bg: 'bg-amber-500/10' 
-    },
-    { 
-      label: 'Churn Rate', 
-      value: `${churnRate.toFixed(1)}%`, 
-      icon: UserMinus, 
-      color: 'text-red-500', 
-      bg: 'bg-red-500/10' 
+      bg: 'bg-red-500/10',
+      trend: '-2.1%'
     },
   ];
 
   return (
-    <div className="space-y-10 pb-20">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="space-y-6 pb-12 animate-in fade-in duration-500">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h2 className="text-3xl font-bold text-slate-800 mb-2">Overview</h2>
-          <p className="text-slate-500">Real-time summary of your business performance.</p>
+          <h2 className="text-xl font-bold text-brand-text mb-1">Business Overview</h2>
+          <p className="text-brand-text-muted text-sm">Real-time summary of your business performance.</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <button 
             onClick={async () => {
-              console.log("Seed button clicked");
-              if (window.confirm('Are you sure you want to seed sample data? This will add data to your database.')) {
-                await seedSampleData();
-                alert('Sample data seeded successfully!');
+              if (window.confirm('Are you sure you want to clear all data? This action cannot be undone.')) {
+                await clearAllData();
+                alert('All data cleared successfully!');
               }
             }}
-            className="px-6 py-3 bg-slate-100 hover:bg-slate-200 rounded-2xl border border-slate-200 shadow-sm transition-all text-sm font-bold flex items-center gap-2 text-slate-700"
+            className="clay-btn text-red-500 hover:text-red-600 hover:bg-red-500/5 border-red-500/10 text-xs font-bold"
           >
-            Seed Sample Data
+            Clear Data
+          </button>
+          <button 
+            onClick={async () => {
+              if (window.confirm('Seed sample data?')) {
+                await seedSampleData();
+                alert('Sample data seeded!');
+              }
+            }}
+            className="clay-btn text-xs font-bold"
+          >
+            Seed Data
           </button>
           <button 
             onClick={() => setActiveTab('sales')}
-            className="px-6 py-3 bg-white hover:bg-slate-50 rounded-2xl border border-slate-200 shadow-sm transition-all text-sm font-bold flex items-center gap-2 text-slate-700"
+            className="clay-btn-primary flex items-center gap-2 text-xs font-bold"
           >
-            <DollarSign className="w-4 h-4 text-brand-sidebar" />
-            View Sales History
+            <DollarSign className="w-3.5 h-3.5" />
+            Sales History
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.slice(0, 4).map((stat) => (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+        {stats.map((stat) => (
           <div 
             key={stat.label}
-            className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all group"
+            className="clay-card p-5 group border-none shadow-medium"
           >
-            <div className="flex items-center justify-between mb-6">
-              <div className={cn("p-4 rounded-2xl", stat.bg)}>
-                <stat.icon className={cn("w-6 h-6", stat.color)} />
+            <div className="flex items-start justify-between mb-4">
+              <div className={cn("p-2.5 rounded-xl", stat.bg)}>
+                <stat.icon className={cn("w-4.5 h-4.5", stat.color)} />
               </div>
-              <div className="text-right">
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{stat.label}</p>
-                <h3 className="text-3xl font-black text-slate-800">{stat.value}</h3>
-              </div>
+              <span className={cn(
+                "text-[10px] font-bold px-2 py-0.5 rounded-lg",
+                stat.trend.startsWith('+') ? "bg-emerald-500/10 text-emerald-600" : "bg-red-500/10 text-red-600"
+              )}>
+                {stat.trend}
+              </span>
             </div>
-            <div className="w-full h-1 bg-slate-50 rounded-full overflow-hidden">
-              <div className={cn("h-full rounded-full transition-all duration-1000", stat.color.replace('text-', 'bg-'))} style={{ width: '60%' }} />
+            <div>
+              <p className="text-[10px] font-bold text-brand-text-muted uppercase tracking-widest mb-1">{stat.label}</p>
+              <h3 className="text-xl font-bold text-brand-text">{stat.value}</h3>
             </div>
           </div>
         ))}
       </div>
 
-      <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
-        <div className="flex items-center justify-between mb-10">
-          <h3 className="text-xl font-bold text-slate-800 flex items-center gap-3">
-            <div className="p-2 bg-brand-sidebar/10 rounded-lg">
-              <TrendingUp className="w-5 h-5 text-brand-sidebar" />
+      <div className="clay-card p-6 md:p-8 border-none shadow-medium">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+          <h3 className="text-lg font-bold text-brand-text flex items-center gap-3">
+            <div className="p-2 bg-brand-primary/10 rounded-xl">
+              <TrendingUp className="w-5 h-5 text-brand-primary" />
             </div>
-            Monthly Comparison
+            Monthly Performance
           </h3>
-          <span className="text-xs font-bold text-slate-400 bg-slate-50 px-3 py-1.5 rounded-full uppercase tracking-widest">{format(now, 'MMMM yyyy')}</span>
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-brand-bg rounded-full border border-brand-border">
+            <Clock className="w-3.5 h-3.5 text-brand-text-muted opacity-50" />
+            <span className="text-[10px] font-bold text-brand-text-muted uppercase tracking-widest">{format(now, 'MMMM yyyy')}</span>
+          </div>
         </div>
         
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-10">
-          <div className="lg:col-span-3 grid grid-cols-2 md:grid-cols-5 gap-10">
-            <div className="space-y-2">
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Prev Month</p>
-              <p className="text-3xl font-black text-slate-800">{prevMonthTotalUsers}</p>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
+          <div className="lg:col-span-8 grid grid-cols-2 sm:grid-cols-4 gap-6">
+            <div className="space-y-1">
+              <p className="text-[10px] text-brand-text-muted font-bold uppercase tracking-widest">Growth</p>
+              <p className="text-xl font-bold text-emerald-500">+{newUsersThisMonth.length}</p>
+              <p className="text-[10px] text-brand-text-muted">New users</p>
             </div>
-            <div className="space-y-2">
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">New Growth</p>
-              <p className="text-3xl font-black text-emerald-500">+{newUsersThisMonth.length}</p>
+            <div className="space-y-1">
+              <p className="text-[10px] text-brand-text-muted font-bold uppercase tracking-widest">Churn</p>
+              <p className="text-xl font-bold text-red-500">-{expiredEventsThisMonth.length}</p>
+              <p className="text-[10px] text-brand-text-muted">Expired</p>
             </div>
-            <div className="space-y-2">
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Drop-off</p>
-              <p className="text-3xl font-black text-red-500">-{expiredEventsThisMonth.length}</p>
-            </div>
-            <div className="space-y-2">
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Net Change</p>
-              <p className={cn("text-3xl font-black", netChange >= 0 ? "text-emerald-500" : "text-red-500")}>
+            <div className="space-y-1">
+              <p className="text-[10px] text-brand-text-muted font-bold uppercase tracking-widest">Net</p>
+              <p className={cn("text-xl font-bold", netChange >= 0 ? "text-emerald-500" : "text-red-500")}>
                 {netChange >= 0 ? '+' : ''}{netChange}
               </p>
+              <p className="text-[10px] text-brand-text-muted">Total change</p>
             </div>
-            <div className="space-y-2">
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Current Active</p>
-              <p className="text-3xl font-black text-brand-sidebar">{activeUsers.length}</p>
+            <div className="space-y-1">
+              <p className="text-[10px] text-brand-text-muted font-bold uppercase tracking-widest">Active</p>
+              <p className="text-xl font-bold text-brand-primary">{activeUsers.length}</p>
+              <p className="text-[10px] text-brand-text-muted">Current total</p>
             </div>
           </div>
 
-          <div className="lg:col-span-2 border-l border-slate-100 pl-10">
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-4">Revenue by Plan</p>
+          <div className="lg:col-span-4 lg:border-l border-brand-border lg:pl-12">
+            <p className="text-[10px] text-brand-text-muted font-bold uppercase tracking-widest mb-4">Revenue Breakdown</p>
             <div className="space-y-3">
               {revenueByPlan.map((item) => (
-                <div key={item.name} className="flex items-center justify-between">
+                <div key={item.name} className="flex items-center justify-between group">
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-brand-sidebar" />
-                    <span className="text-xs font-bold text-slate-600">{item.name}</span>
+                    <div className="w-1.5 h-1.5 rounded-full bg-brand-primary group-hover:scale-150 transition-transform" />
+                    <span className="text-xs font-medium text-brand-text">{item.name}</span>
                   </div>
-                  <span className="text-sm font-black text-slate-800">{item.value.toLocaleString()} Ks</span>
+                  <span className="text-xs font-bold text-brand-text">{item.value.toLocaleString()} Ks</span>
                 </div>
               ))}
               {revenueByPlan.length === 0 && (
-                <p className="text-xs text-slate-400 italic">No sales recorded this month.</p>
+                <p className="text-xs text-brand-text-muted italic">No sales recorded.</p>
               )}
             </div>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
         {/* Growth Trend Chart */}
-        <div className="lg:col-span-2 bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
-          <div className="flex items-center justify-between mb-10">
-            <h3 className="text-xl font-bold text-slate-800 flex items-center gap-3">
-              <div className="p-2 bg-blue-50 rounded-lg">
+        <div className="lg:col-span-2 clay-card p-6 md:p-8 border-none shadow-medium">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-10">
+            <h3 className="text-lg font-bold text-brand-text flex items-center gap-3">
+              <div className="p-2 bg-blue-500/10 rounded-xl">
                 <TrendingUp className="w-5 h-5 text-blue-500" />
               </div>
               User Growth Trend
             </h3>
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-blue-500" />
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">New</span>
+                <div className="w-2 h-2 rounded-full bg-blue-500" />
+                <span className="text-[10px] font-bold text-brand-text-muted uppercase tracking-widest">New</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-brand-sidebar" />
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Net</span>
+                <div className="w-2 h-2 rounded-full bg-brand-primary" />
+                <span className="text-[10px] font-bold text-brand-text-muted uppercase tracking-widest">Net</span>
               </div>
             </div>
           </div>
-          <div className="h-[350px] w-full">
+          <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={growthData}>
                 <defs>
@@ -342,47 +342,43 @@ export function Dashboard({ users, sales, expenses, setActiveTab }: DashboardPro
                     <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
                   </linearGradient>
                   <linearGradient id="colorNet" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3F51B5" stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor="#3F51B5" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.1}/>
+                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-brand-border)" />
                 <XAxis 
                   dataKey="name" 
-                  stroke="#94a3b8" 
-                  fontSize={10} 
-                  fontWeight={700}
                   tickLine={false} 
                   axisLine={false}
                   dy={15}
+                  tick={{ fill: 'var(--color-brand-text-muted)', fontSize: 10, fontWeight: 600 }}
                 />
                 <YAxis 
-                  stroke="#94a3b8" 
-                  fontSize={10} 
-                  fontWeight={700}
                   tickLine={false} 
                   axisLine={false}
                   dx={-15}
+                  tick={{ fill: 'var(--color-brand-text-muted)', fontSize: 10, fontWeight: 600 }}
                 />
                 <Tooltip 
                   contentStyle={{ 
-                    backgroundColor: '#fff', 
-                    border: '1px solid #f1f5f9', 
-                    borderRadius: '16px',
-                    fontSize: '12px',
-                    boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
-                    padding: '12px'
+                    backgroundColor: 'var(--color-brand-card)', 
+                    border: '1px solid var(--color-brand-border)', 
+                    borderRadius: '12px',
+                    fontSize: '11px',
+                    boxShadow: 'var(--shadow-medium)',
+                    padding: '10px'
                   }}
-                  itemStyle={{ fontWeight: 700, padding: '2px 0' }}
-                  labelStyle={{ color: '#64748b', marginBottom: '8px', fontWeight: 800, textTransform: 'uppercase', fontSize: '10px' }}
-                  cursor={{ stroke: '#f1f5f9', strokeWidth: 2 }}
+                  itemStyle={{ fontWeight: 600, padding: '2px 0' }}
+                  labelStyle={{ color: 'var(--color-brand-text-muted)', marginBottom: '6px', fontWeight: 700, textTransform: 'uppercase', fontSize: '9px' }}
+                  cursor={{ stroke: 'var(--color-brand-border)', strokeWidth: 2 }}
                 />
                 <Area 
                   type="monotone" 
                   dataKey="new" 
                   name="New Users"
                   stroke="#3b82f6" 
-                  strokeWidth={3}
+                  strokeWidth={2.5}
                   fillOpacity={1} 
                   fill="url(#colorNew)" 
                 />
@@ -390,8 +386,8 @@ export function Dashboard({ users, sales, expenses, setActiveTab }: DashboardPro
                   type="monotone" 
                   dataKey="net" 
                   name="Net Change"
-                  stroke="#3F51B5" 
-                  strokeWidth={3}
+                  stroke="#6366f1" 
+                  strokeWidth={2.5}
                   fillOpacity={1} 
                   fill="url(#colorNet)" 
                 />
@@ -400,12 +396,12 @@ export function Dashboard({ users, sales, expenses, setActiveTab }: DashboardPro
           </div>
         </div>
 
-        <div className="space-y-8">
-          <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
-            <div className="flex items-center justify-between mb-8">
-              <h3 className="text-lg font-bold text-slate-800 flex items-center gap-3">
-                <div className="p-2 bg-amber-50 rounded-lg">
-                  <AlertCircle className="w-5 h-5 text-amber-500" />
+        <div className="space-y-6 md:space-y-8">
+          <div className="clay-card p-6 border-none shadow-medium">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-base font-bold text-brand-text flex items-center gap-3">
+                <div className="p-2 bg-amber-500/10 rounded-xl">
+                  <AlertCircle className="w-4 h-4 text-amber-500" />
                 </div>
                 Expiring Soon
               </h3>
@@ -413,7 +409,7 @@ export function Dashboard({ users, sales, expenses, setActiveTab }: DashboardPro
                 <button
                   onClick={handleSendBulkReminders}
                   disabled={isBulkSending}
-                  className="text-[10px] font-black text-brand-sidebar hover:text-brand-blue uppercase tracking-widest flex items-center gap-2 transition-colors disabled:opacity-50"
+                  className="text-[10px] font-bold text-brand-primary hover:text-brand-primary-hover uppercase tracking-widest flex items-center gap-2 transition-colors disabled:opacity-50"
                 >
                   {isBulkSending ? (
                     <Loader2 className="w-3 h-3 animate-spin" />
@@ -424,17 +420,18 @@ export function Dashboard({ users, sales, expenses, setActiveTab }: DashboardPro
                 </button>
               )}
             </div>
-            <div className="space-y-4">
+            <div className="space-y-3">
               {expiringSoon.slice(0, 4).map((user) => (
-                <div key={user.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 group hover:bg-white hover:border-brand-sidebar/20 transition-all">
-                  <div>
-                    <p className="text-sm font-bold text-slate-700">{user.name}</p>
-                    <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">
+                <div key={user.id} className="flex items-center justify-between p-3 bg-brand-bg rounded-xl border border-brand-border group hover:border-brand-primary/30 transition-all">
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-brand-text truncate">{user.name}</p>
+                    <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mt-0.5">
                       {(() => {
                         if (!user.expiryDate) return 'N/A';
                         try {
                           const expiryDate = parseISO(user.expiryDate);
-                          return `${Math.ceil((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))} days left`;
+                          const daysLeft = Math.ceil((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                          return `${daysLeft} ${daysLeft === 1 ? 'day' : 'days'} left`;
                         } catch (e) {
                           return 'Invalid Date';
                         }
@@ -445,51 +442,51 @@ export function Dashboard({ users, sales, expenses, setActiveTab }: DashboardPro
                     onClick={() => handleSendReminder(user)}
                     disabled={sendingEmails[user.id] || sentEmails[user.id]}
                     className={cn(
-                      "p-2 rounded-xl transition-all",
+                      "p-2 rounded-lg transition-all active:scale-90",
                       sentEmails[user.id] 
-                        ? "bg-emerald-100 text-emerald-600" 
-                        : "bg-white text-slate-400 hover:text-brand-sidebar shadow-sm border border-slate-100"
+                        ? "bg-emerald-500/10 text-emerald-600" 
+                        : "bg-brand-bg border border-brand-border text-brand-text-muted hover:text-brand-primary"
                     )}
                   >
                     {sendingEmails[user.id] ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     ) : sentEmails[user.id] ? (
-                      <CheckCircle2 className="w-4 h-4" />
+                      <CheckCircle2 className="w-3.5 h-3.5" />
                     ) : (
-                      <Mail className="w-4 h-4" />
+                      <Mail className="w-3.5 h-3.5" />
                     )}
                   </button>
                 </div>
               ))}
               {expiringSoon.length === 0 && (
-                <div className="text-center py-10">
-                  <CheckCircle2 className="w-10 h-10 text-emerald-200 mx-auto mb-3" />
-                  <p className="text-slate-400 text-xs font-medium">All subscriptions are up to date.</p>
+                <div className="text-center py-8">
+                  <CheckCircle2 className="w-8 h-8 text-emerald-500/20 mx-auto mb-2" />
+                  <p className="text-brand-text-muted text-[10px] font-bold uppercase tracking-widest">All up to date</p>
                 </div>
               )}
             </div>
           </div>
 
-          <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
-            <h3 className="text-lg font-bold text-slate-800 mb-8 flex items-center gap-3">
-              <div className="p-2 bg-slate-50 rounded-lg">
-                <RefreshCw className="w-5 h-5 text-slate-400" />
+          <div className="clay-card p-6 border-none shadow-medium">
+            <h3 className="text-base font-bold text-brand-text mb-6 flex items-center gap-3">
+              <div className="p-2 bg-brand-primary/10 rounded-xl">
+                <RefreshCw className="w-4 h-4 text-brand-primary" />
               </div>
               Recent Activity
             </h3>
-            <div className="space-y-6">
+            <div className="space-y-4">
               {sales.slice(0, 4).map((sale) => (
                 <div key={sale.id} className="flex items-center justify-between group">
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-3">
                     <div className={cn(
-                      "w-10 h-10 rounded-2xl flex items-center justify-center text-xs font-black uppercase",
-                      sale.type === 'New' ? "bg-blue-50 text-blue-600" : "bg-orange-50 text-orange-600"
+                      "w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold uppercase",
+                      sale.type === 'New' ? "bg-blue-500/10 text-blue-600" : "bg-brand-primary/10 text-brand-primary"
                     )}>
                       {sale.userName.charAt(0)}
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-slate-700">{sale.userName}</p>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                      <p className="text-xs font-bold text-brand-text">{sale.userName}</p>
+                      <p className="text-[10px] font-bold text-brand-text-muted uppercase tracking-widest mt-0.5">
                         {sale.type} • {(() => {
                           if (!sale.date) return 'N/A';
                           try {
@@ -501,11 +498,11 @@ export function Dashboard({ users, sales, expenses, setActiveTab }: DashboardPro
                       </p>
                     </div>
                   </div>
-                  <p className="text-sm font-black text-emerald-600">+{sale.amount.toLocaleString()}</p>
+                  <p className="text-xs font-bold text-emerald-600">+{sale.amount.toLocaleString()}</p>
                 </div>
               ))}
               {sales.length === 0 && (
-                <p className="text-center text-slate-400 py-10 text-xs">No recent activity.</p>
+                <p className="text-center text-brand-text-muted py-8 text-[10px] font-bold uppercase tracking-widest">No activity</p>
               )}
             </div>
           </div>

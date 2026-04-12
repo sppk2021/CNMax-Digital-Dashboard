@@ -121,26 +121,26 @@ export function UserList({ users, plans, sales }: UserListProps) {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="space-y-6 animate-in fade-in duration-500">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h2 className="text-3xl font-bold text-slate-800 mb-2">User Management</h2>
-          <p className="text-slate-500">Manage your customers and their subscriptions.</p>
+          <h2 className="text-xl font-bold text-brand-text mb-1">User Management</h2>
+          <p className="text-brand-text-muted text-sm">Manage your customers and their subscriptions.</p>
         </div>
         <div className="flex items-center gap-3">
           <button 
             onClick={exportToCSV}
-            className="flex items-center gap-2 px-4 py-2 bg-white hover:bg-slate-50 rounded-xl border border-slate-200 shadow-sm transition-all text-sm font-bold text-slate-700"
+            className="clay-btn flex items-center gap-2 text-sm"
           >
             <Download className="w-4 h-4" />
-            Export CSV
+            Export
           </button>
           <button 
             onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2 px-6 py-2 bg-brand-sidebar hover:bg-brand-blue rounded-xl text-white transition-all text-sm font-bold shadow-lg shadow-brand-sidebar/20"
+            className="clay-btn-primary flex items-center gap-2 text-sm"
           >
             <Plus className="w-4 h-4" />
-            Add New User
+            Add User
           </button>
         </div>
       </div>
@@ -160,27 +160,28 @@ export function UserList({ users, plans, sales }: UserListProps) {
       />
 
       {/* Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+      <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-text-muted opacity-50" />
           <input 
             type="text" 
-            placeholder="Search by Facebook/Viber name..."
+            placeholder="Search users..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-white border border-slate-200 rounded-xl py-2.5 pl-10 pr-4 focus:outline-none focus:border-brand-sidebar transition-colors text-slate-700"
+            className="clay-input w-full pl-11 py-2.5"
           />
         </div>
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar">
-          <Filter className="w-4 h-4 text-slate-400 shrink-0" />
-          <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 whitespace-nowrap">
+        <div className="flex items-center gap-3 overflow-x-auto pb-2 lg:pb-0 custom-scrollbar">
+          <div className="flex bg-brand-bg p-1 rounded-xl border border-brand-border whitespace-nowrap gap-1">
             {['All', 'Active', 'Expired', 'Upcoming', 'New This Month', 'Renewed This Month'].map((f) => (
               <button
                 key={f}
                 onClick={() => setStatusFilter(f as any)}
                 className={cn(
-                  "px-4 py-1.5 text-xs font-bold rounded-lg transition-all",
-                  statusFilter === f ? "bg-white text-brand-sidebar shadow-sm" : "text-slate-500 hover:text-slate-700"
+                  "px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all uppercase tracking-wider",
+                  statusFilter === f 
+                    ? "bg-brand-primary text-white shadow-sm" 
+                    : "text-brand-text-muted hover:text-brand-text hover:bg-brand-primary/5"
                 )}
               >
                 {f}
@@ -199,7 +200,6 @@ export function UserList({ users, plans, sales }: UserListProps) {
             <button 
               onClick={() => {
                 const selectedUsers = users.filter(u => selectedUserIds.has(u.id));
-                // Logic for bulk renewal could go here
                 alert(`Bulk renewal for ${selectedUserIds.size} users initiated.`);
               }}
               className="text-sm font-bold hover:underline flex items-center gap-2"
@@ -209,7 +209,6 @@ export function UserList({ users, plans, sales }: UserListProps) {
             </button>
             <button 
               onClick={() => {
-                // Logic for bulk delete could go here
                 alert(`Bulk delete for ${selectedUserIds.size} users initiated.`);
               }}
               className="text-sm font-bold hover:underline flex items-center gap-2 text-white/80"
@@ -228,28 +227,28 @@ export function UserList({ users, plans, sales }: UserListProps) {
       )}
 
       {/* Table */}
-      <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden">
+      <div className="clay-card overflow-hidden border-none shadow-medium">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-50 bg-slate-50/50">
-                <th className="px-6 py-4 w-10">
+              <tr className="bg-brand-bg border-b border-brand-border">
+                <th className="px-6 py-3 w-10">
                   <input 
                     type="checkbox" 
                     checked={selectedUserIds.size === filteredUsers.length && filteredUsers.length > 0}
                     onChange={toggleSelectAll}
-                    className="w-4 h-4 rounded border-slate-300 bg-white text-brand-sidebar focus:ring-brand-sidebar/50"
+                    className="w-4 h-4 rounded border-brand-border text-brand-primary focus:ring-brand-primary/20"
                   />
                 </th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">User</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Plan</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Subscription</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Status</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Expiry</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest text-right">Actions</th>
+                <th className="px-6 py-3 text-[10px] font-bold text-brand-text-muted uppercase tracking-widest">User</th>
+                <th className="px-6 py-3 text-[10px] font-bold text-brand-text-muted uppercase tracking-widest">Plan</th>
+                <th className="px-6 py-3 text-[10px] font-bold text-brand-text-muted uppercase tracking-widest">Subscription</th>
+                <th className="px-6 py-3 text-[10px] font-bold text-brand-text-muted uppercase tracking-widest">Status</th>
+                <th className="px-6 py-3 text-[10px] font-bold text-brand-text-muted uppercase tracking-widest">Expiry</th>
+                <th className="px-6 py-3 text-[10px] font-bold text-brand-text-muted uppercase tracking-widest text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
+            <tbody className="divide-y divide-brand-border">
               {filteredUsers.map((user) => {
                 const status = getStatus(user.expiryDate, user.subscriptionStartDate);
                 const isSelected = selectedUserIds.has(user.id);
@@ -258,8 +257,8 @@ export function UserList({ users, plans, sales }: UserListProps) {
                     key={user.id} 
                     onClick={() => openDetails(user)}
                     className={cn(
-                      "hover:bg-slate-50/50 transition-colors group cursor-pointer",
-                      isSelected && "bg-brand-sidebar/5"
+                      "hover:bg-brand-bg/50 transition-colors group cursor-pointer",
+                      isSelected && "bg-brand-primary/5"
                     )}
                   >
                     <td className="px-6 py-4">
@@ -268,35 +267,35 @@ export function UserList({ users, plans, sales }: UserListProps) {
                         checked={isSelected}
                         onClick={(e) => toggleSelectUser(user.id, e)}
                         onChange={() => {}}
-                        className="w-4 h-4 rounded border-slate-300 bg-white text-brand-sidebar focus:ring-brand-sidebar/50"
+                        className="w-4 h-4 rounded border-brand-border text-brand-primary focus:ring-brand-primary/20"
                       />
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-brand-sidebar/10 flex items-center justify-center text-brand-sidebar font-bold text-sm border border-brand-sidebar/5">
+                        <div className="w-10 h-10 rounded-xl bg-brand-primary/10 flex items-center justify-center text-brand-primary font-bold text-sm">
                           {user.name.charAt(0)}
                         </div>
                         <div>
-                          <p className="font-bold text-slate-700">{user.name}</p>
+                          <p className="text-sm font-bold text-brand-text">{user.name}</p>
                           <div className="flex items-center gap-1.5 mt-0.5">
                             {user.name.toLowerCase().includes('fb') || user.name.toLowerCase().includes('facebook') ? (
                               <Facebook className="w-3 h-3 text-blue-500" />
                             ) : (
                               <MessageCircle className="w-3 h-3 text-emerald-500" />
                             )}
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">ID: {user.id.slice(0, 8)}</span>
+                            <span className="text-[10px] font-bold text-brand-text-muted uppercase tracking-wider">ID: {user.id.slice(0, 8)}</span>
                           </div>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-sm font-bold text-slate-600">
+                      <span className="text-xs font-semibold text-brand-text">
                         {user.planName || 'N/A'}
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-2 text-sm text-slate-500">
-                        <Calendar className="w-4 h-4 text-slate-300" />
+                      <div className="flex items-center gap-2 text-xs text-brand-text-muted">
+                        <Calendar className="w-3.5 h-3.5 opacity-50" />
                         {(() => {
                           if (!user.subscriptionStartDate) return 'N/A';
                           try {
@@ -309,18 +308,18 @@ export function UserList({ users, plans, sales }: UserListProps) {
                     </td>
                     <td className="px-6 py-4">
                       <span className={cn(
-                        "inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wider",
-                        status === 'Active' && "bg-emerald-50 text-emerald-600 border-emerald-100",
-                        status === 'Expired' && "bg-red-50 text-red-600 border-red-100",
-                        status === 'Upcoming' && "bg-blue-50 text-blue-600 border-blue-100"
+                        "inline-flex items-center px-2.5 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider",
+                        status === 'Active' && "bg-emerald-500/10 text-emerald-600",
+                        status === 'Expired' && "bg-red-500/10 text-red-600",
+                        status === 'Upcoming' && "bg-blue-500/10 text-blue-600"
                       )}>
                         {status}
                       </span>
                     </td>
                     <td className="px-6 py-4">
                       <p className={cn(
-                        "text-sm font-bold",
-                        status === 'Expired' ? "text-red-500" : "text-slate-600"
+                        "text-xs font-bold",
+                        status === 'Expired' ? "text-red-500" : "text-brand-text"
                       )}>
                         {(() => {
                           if (!user.expiryDate) return 'N/A';
@@ -337,10 +336,10 @@ export function UserList({ users, plans, sales }: UserListProps) {
                         <button 
                           onClick={(e) => openRenewal(user, e)}
                           className={cn(
-                            "flex items-center gap-2 px-4 py-1.5 rounded-xl text-xs font-bold transition-all",
+                            "flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all",
                             status === 'Expired'
-                              ? "bg-brand-sidebar text-white hover:bg-brand-blue shadow-md shadow-brand-sidebar/20"
-                              : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                              ? "bg-brand-primary text-white shadow-sm hover:bg-brand-primary-hover"
+                              : "bg-brand-bg border border-brand-border text-brand-text-muted hover:text-brand-primary"
                           )}
                         >
                           <RefreshCw className="w-3 h-3" />
@@ -348,7 +347,7 @@ export function UserList({ users, plans, sales }: UserListProps) {
                         </button>
                         <button 
                           onClick={(e) => { e.stopPropagation(); }}
-                          className="p-2 text-slate-300 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                          className="p-2 text-brand-text-muted hover:text-brand-primary transition-all rounded-lg hover:bg-brand-bg"
                         >
                           <MoreVertical className="w-4 h-4" />
                         </button>
@@ -361,9 +360,9 @@ export function UserList({ users, plans, sales }: UserListProps) {
           </table>
         </div>
         {filteredUsers.length === 0 && (
-          <div className="text-center py-20 bg-slate-50/30">
-            <Users className="w-12 h-12 text-slate-200 mx-auto mb-4" />
-            <p className="text-slate-400 font-medium">No users found matching your criteria.</p>
+          <div className="text-center py-20">
+            <Users className="w-12 h-12 text-brand-text-muted/20 mx-auto mb-4" />
+            <p className="text-brand-text-muted font-medium">No users found matching your criteria.</p>
           </div>
         )}
       </div>

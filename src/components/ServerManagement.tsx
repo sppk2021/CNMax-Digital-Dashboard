@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Plus, 
   Search, 
@@ -15,49 +15,28 @@ import {
   CheckCircle2,
   AlertCircle,
   Clock,
-  X
+  X,
+  Bell
 } from 'lucide-react';
 import { collection, addDoc, deleteDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { format, parseISO } from 'date-fns';
 import { cn } from '../utils';
-
-// Simple mapping of location names to [longitude, latitude]
-const locationCoords: { [key: string]: [number, number] } = {
-  'Singapore': [103.8198, 1.3521],
-  'US-East': [-77.0369, 38.9072],
-  'US-West': [-118.2437, 34.0522],
-  'London': [-0.1278, 51.5074],
-  'Tokyo': [139.6917, 35.6895],
-  'Frankfurt': [8.6821, 50.1109],
-};
-
-interface Server {
-  id: string;
-  name: string;
-  url: string;
-  uptimeRobotUrl?: string;
-  location: string;
-  status: 'Online' | 'Offline' | 'Maintenance';
-  ipAddress?: string;
-  provider?: string;
-  notes?: string;
-  createdAt: string;
-  lastCheckedAt: string;
-}
+import toast from 'react-hot-toast';
 
 interface ServerManagementProps {
-  servers: Server[];
+  servers: any[];
 }
 
 export function ServerManagement({ servers }: ServerManagementProps) {
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [providerFilter, setProviderFilter] = useState('All');
   const [locationFilter, setLocationFilter] = useState('All');
-  const [selectedServer, setSelectedServer] = useState<Server | null>(null);
-  const [editingServer, setEditingServer] = useState<Server | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingServer, setEditingServer] = useState<any>(null);
+  const [selectedServer, setSelectedServer] = useState<any>(null);
+  const [validationError, setValidationError] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     url: '',
@@ -69,19 +48,80 @@ export function ServerManagement({ servers }: ServerManagementProps) {
     notes: ''
   });
 
+  // Periodic status check
+  useEffect(() => {
+    const checkAllServers = () => {
+      servers.forEach(server => checkServerStatus(server, true));
+    };
+
+    // Initial check
+    checkAllServers();
+
+    const interval = setInterval(checkAllServers, 60000); // Check every minute
+    return () => clearInterval(interval);
+  }, [servers.length]); // Only re-run if server count changes
+
+  const checkServerStatus = async (server: any, notify: boolean = false) => {
+    try {
+      // Use a proxy or a simple fetch with no-cors to check reachability
+      // Note: no-cors won't give us the status code, but it will throw if unreachable
+      await fetch(server.url, { method: 'HEAD', mode: 'no-cors', cache: 'no-cache' });
+      
+      const newStatus = 'Online';
+      if (server.status !== newStatus) {
+        await updateDoc(doc(db, 'servers', server.id), {
+          status: newStatus,
+          lastCheckedAt: new Date().toISOString()
+        });
+        if (notify && server.status === 'Offline') {
+          toast.success(`Server ${server.name} is back online!`, {
+            icon: '✅',
+            duration: 5000,
+          });
+        }
+      }
+    } catch (error) {
+      const newStatus = 'Offline';
+      if (server.status !== newStatus) {
+        await updateDoc(doc(db, 'servers', server.id), {
+          status: newStatus,
+          lastCheckedAt: new Date().toISOString()
+        });
+        if (notify) {
+          toast.error(`Alert: Server ${server.name} is offline!`, {
+            icon: '🚨',
+            duration: 10000,
+          });
+        }
+      }
+    }
+  };
+
+  const filteredServers = servers.filter(server => {
+    const matchesSearch = 
+      server.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      server.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      server.url.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'All' || server.status === statusFilter;
+    const matchesProvider = providerFilter === 'All' || server.provider === providerFilter;
+    const matchesLocation = locationFilter === 'All' || server.location === locationFilter;
+    return matchesSearch && matchesStatus && matchesProvider && matchesLocation;
+  });
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setValidationError('');
     try {
       if (editingServer) {
         await updateDoc(doc(db, 'servers', editingServer.id), {
           ...formData,
-          lastCheckedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString()
         });
       } else {
         await addDoc(collection(db, 'servers'), {
           ...formData,
           createdAt: new Date().toISOString(),
-          lastCheckedAt: new Date().toISOString()
+          status: 'Online'
         });
       }
       setIsAddModalOpen(false);
@@ -96,8 +136,8 @@ export function ServerManagement({ servers }: ServerManagementProps) {
         provider: '',
         notes: ''
       });
-    } catch (error) {
-      console.error('Error saving server:', error);
+    } catch (error: any) {
+      setValidationError(error.message);
     }
   };
 
@@ -106,56 +146,22 @@ export function ServerManagement({ servers }: ServerManagementProps) {
       try {
         await deleteDoc(doc(db, 'servers', id));
       } catch (error) {
-        console.error('Error deleting server:', error);
+        console.error("Error deleting server:", error);
       }
     }
   };
 
-  const checkServerStatus = async (server: any) => {
-    try {
-      // Note: 'no-cors' mode means we can't read the response status, 
-      // but if the request completes, we assume it's reachable.
-      // A more robust solution would require a server-side proxy.
-      await fetch(server.url, { method: 'HEAD', mode: 'no-cors' });
-      await updateDoc(doc(db, 'servers', server.id), {
-        status: 'Online',
-        lastCheckedAt: new Date().toISOString()
-      });
-    } catch (error) {
-      console.error('Error checking server:', error);
-      await updateDoc(doc(db, 'servers', server.id), {
-        status: 'Offline',
-        lastCheckedAt: new Date().toISOString()
-      });
-    }
-  };
-
-  const checkAllServers = async () => {
-    for (const server of servers) {
-      await checkServerStatus(server);
-    }
-  };
-
-  const filteredServers = servers.filter(s => {
-    const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      s.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      s.url.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'All' || s.status === statusFilter;
-    const matchesProvider = providerFilter === 'All' || s.provider === providerFilter;
-    const matchesLocation = locationFilter === 'All' || s.location === locationFilter;
-    return matchesSearch && matchesStatus && matchesProvider && matchesLocation;
-  });
-
   return (
-    <div className="space-y-10">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="space-y-8 animate-in fade-in duration-500">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h2 className="text-3xl font-bold text-slate-800 mb-2">Server Monitoring</h2>
-          <p className="text-slate-500">Manage and monitor your infrastructure status.</p>
+          <h2 className="text-2xl font-bold text-brand-text mb-1">Server Infrastructure</h2>
+          <p className="text-brand-text-muted text-sm">Real-time monitoring and management of your global server fleet.</p>
         </div>
         <button 
           onClick={() => {
             setEditingServer(null);
+            setValidationError('');
             setFormData({
               name: '',
               url: '',
@@ -168,107 +174,48 @@ export function ServerManagement({ servers }: ServerManagementProps) {
             });
             setIsAddModalOpen(true);
           }}
-          className="flex items-center gap-2 bg-brand-sidebar hover:bg-brand-blue text-white px-6 py-3 rounded-2xl shadow-lg shadow-brand-sidebar/20 transition-all font-bold"
+          className="clay-btn-primary flex items-center gap-3"
         >
-          <Plus className="w-5 h-5" />
+          <Plus className="w-4 h-4" />
           Add Server
         </button>
-        <button 
-          onClick={checkAllServers}
-          className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-6 py-3 rounded-2xl transition-all font-bold"
-        >
-          <Activity className="w-5 h-5" />
-          Refresh Status
-        </button>
       </div>
-
-      {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="p-3 bg-emerald-50 rounded-xl">
-              <CheckCircle2 className="w-6 h-6 text-emerald-500" />
-            </div>
-            <div>
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Online</p>
-              <h3 className="text-2xl font-black text-slate-800">
-                {servers.filter(s => s.status === 'Online').length}
-              </h3>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="p-3 bg-red-50 rounded-xl">
-              <AlertCircle className="w-6 h-6 text-red-500" />
-            </div>
-            <div>
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Offline</p>
-              <h3 className="text-2xl font-black text-slate-800">
-                {servers.filter(s => s.status === 'Offline').length}
-              </h3>
+        {[
+          { label: 'Online', count: servers.filter(s => s.status === 'Online').length, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-500/10' },
+          { label: 'Offline', count: servers.filter(s => s.status === 'Offline').length, icon: AlertCircle, color: 'text-red-600', bg: 'bg-red-500/10' },
+          { label: 'Maintenance', count: servers.filter(s => s.status === 'Maintenance').length, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-500/10' },
+        ].map((stat, i) => (
+          <div key={i} className="clay-card p-6 border-none shadow-medium">
+            <div className="flex items-center gap-4">
+              <div className={cn("p-3 rounded-xl", stat.bg)}>
+                <stat.icon className={cn("w-6 h-6", stat.color)} />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-brand-text-muted uppercase tracking-widest">{stat.label}</p>
+                <h3 className="text-xl font-bold text-brand-text">{stat.count}</h3>
+              </div>
             </div>
           </div>
-        </div>
-        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="p-3 bg-amber-50 rounded-xl">
-              <Clock className="w-6 h-6 text-amber-500" />
-            </div>
-            <div>
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Maintenance</p>
-              <h3 className="text-2xl font-black text-slate-800">
-                {servers.filter(s => s.status === 'Maintenance').length}
-              </h3>
-            </div>
-          </div>
-        </div>
+        ))}
       </div>
-
-      {/* World Map - Temporarily disabled due to dependency conflict */}
-      {/* <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
-        <h3 className="text-xl font-bold text-slate-800 mb-6">Server Locations</h3>
-        <ComposableMap projection="geoMercator" height={300}>
-          <ZoomableGroup zoom={1}>
-            <Geographies geography="/features.json">
-              {({ geographies }) =>
-                geographies.map((geo) => (
-                  <Geography key={geo.rsmKey} geography={geo} fill="#E2E8F0" stroke="#FFF" />
-                ))
-              }
-            </Geographies>
-            {servers.map((server) => {
-              const coords = locationCoords[server.location];
-              if (!coords) return null;
-              return (
-                <Marker key={server.id} coordinates={coords}>
-                  <circle r={6} fill={server.status === 'Online' ? '#10B981' : '#EF4444'} />
-                  <text textAnchor="middle" y={-10} style={{ fontSize: '10px', fill: '#475569' }}>
-                    {server.name}
-                  </text>
-                </Marker>
-              );
-            })}
-          </ZoomableGroup>
-        </ComposableMap>
-      </div> */}
 
       {/* Search & Filter */}
       <div className="flex flex-col md:flex-row gap-4">
         <div className="flex-1 relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-text-muted w-4 h-4 opacity-50" />
           <input 
             type="text" 
-            placeholder="Search servers by name, location or URL..."
+            placeholder="Search servers..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-12 pr-6 py-4 bg-white border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-brand-sidebar/20 shadow-sm transition-all"
+            className="clay-input w-full pl-11 py-3"
           />
         </div>
         <select 
           value={statusFilter} 
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-4 py-4 bg-white border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-brand-sidebar/20 shadow-sm"
+          className="clay-input appearance-none py-3"
         >
           <option value="All">All Statuses</option>
           <option value="Online">Online</option>
@@ -278,18 +225,18 @@ export function ServerManagement({ servers }: ServerManagementProps) {
         <select 
           value={providerFilter} 
           onChange={(e) => setProviderFilter(e.target.value)}
-          className="px-4 py-4 bg-white border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-brand-sidebar/20 shadow-sm"
+          className="clay-input appearance-none py-3"
         >
           <option value="All">All Providers</option>
-          {[...new Set(servers.map(s => s.provider))].filter(Boolean).map(p => <option key={p} value={p}>{p}</option>)}
+          {[...new Set(servers.map(s => s.provider))].filter(Boolean).map((p: any) => <option key={p} value={p}>{p}</option>)}
         </select>
         <select 
           value={locationFilter} 
           onChange={(e) => setLocationFilter(e.target.value)}
-          className="px-4 py-4 bg-white border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-brand-sidebar/20 shadow-sm"
+          className="clay-input appearance-none py-3"
         >
           <option value="All">All Locations</option>
-          {[...new Set(servers.map(s => s.location))].filter(Boolean).map(l => <option key={l} value={l}>{l}</option>)}
+          {[...new Set(servers.map(s => s.location))].filter(Boolean).map((l: any) => <option key={l} value={l}>{l}</option>)}
         </select>
         <button 
           onClick={() => {
@@ -298,45 +245,46 @@ export function ServerManagement({ servers }: ServerManagementProps) {
             setProviderFilter('All');
             setLocationFilter('All');
           }}
-          className="px-6 py-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl transition-all font-bold"
+          className="clay-btn px-6 py-3"
         >
           Clear
         </button>
       </div>
 
       {/* Server Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredServers.map((server) => (
           <div 
             key={server.id}
-            className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all group overflow-hidden"
+            className="clay-card group overflow-hidden border-none shadow-medium hover:shadow-lg transition-all"
           >
-            <div className="p-8">
+            <div className="p-6 md:p-8">
               <div className="flex items-center justify-between mb-6">
                 <div className={cn(
-                  "p-4 rounded-2xl",
-                  server.status === 'Online' ? "bg-emerald-50" : 
-                  server.status === 'Offline' ? "bg-red-50" : "bg-amber-50"
+                  "p-3 rounded-xl",
+                  server.status === 'Online' ? "bg-emerald-500/10" : 
+                  server.status === 'Offline' ? "bg-red-500/10" : "bg-amber-500/10"
                 )}>
                   <Server className={cn(
-                    "w-6 h-6",
+                    "w-5 h-5",
                     server.status === 'Online' ? "text-emerald-500" : 
                     server.status === 'Offline' ? "text-red-500" : "text-amber-500"
                   )} />
                 </div>
                 <div className="flex items-center gap-2">
                   <span className={cn(
-                    "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest",
-                    server.status === 'Online' ? "bg-emerald-100 text-emerald-600" : 
-                    server.status === 'Offline' ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-600"
+                    "px-2.5 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-widest",
+                    server.status === 'Online' ? "bg-emerald-500/10 text-emerald-600" : 
+                    server.status === 'Offline' ? "bg-red-500/10 text-red-600" : "bg-amber-500/10 text-amber-600"
                   )}>
                     {server.status}
                   </span>
-                  <div className="relative group/menu">
+                  <div className="flex items-center gap-1">
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
                         setEditingServer(server);
+                        setValidationError('');
                         setFormData({
                           name: server.name,
                           url: server.url,
@@ -349,18 +297,18 @@ export function ServerManagement({ servers }: ServerManagementProps) {
                         });
                         setIsAddModalOpen(true);
                       }}
-                      className="p-2 hover:bg-slate-100 rounded-xl transition-colors"
+                      className="p-1.5 text-brand-text-muted hover:text-brand-primary hover:bg-brand-bg rounded-lg transition-all"
                     >
-                      <Edit2 className="w-4 h-4 text-slate-400" />
+                      <Edit2 className="w-3.5 h-3.5" />
                     </button>
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
                         handleDelete(server.id);
                       }}
-                      className="p-2 hover:bg-red-50 rounded-xl transition-colors"
+                      className="p-1.5 text-brand-text-muted hover:text-red-500 hover:bg-brand-bg rounded-lg transition-all"
                     >
-                      <Trash2 className="w-4 h-4 text-red-400" />
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
@@ -369,7 +317,7 @@ export function ServerManagement({ servers }: ServerManagementProps) {
               <div className="flex items-center justify-between mb-2">
                 <h3 
                   onClick={() => setSelectedServer(server)}
-                  className="text-xl font-bold text-slate-800 group-hover:text-brand-sidebar transition-colors cursor-pointer"
+                  className="text-lg font-bold text-brand-text group-hover:text-brand-primary transition-colors cursor-pointer"
                 >
                   {server.name}
                 </h3>
@@ -377,38 +325,38 @@ export function ServerManagement({ servers }: ServerManagementProps) {
                   href={server.url} 
                   target="_blank" 
                   rel="noopener noreferrer" 
-                  className="text-brand-sidebar hover:text-brand-blue transition-colors"
+                  className="p-1.5 text-brand-text-muted hover:text-brand-primary hover:bg-brand-bg rounded-lg transition-all"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <ExternalLink className="w-5 h-5" />
+                  <ExternalLink className="w-3.5 h-3.5" />
                 </a>
               </div>
               
-              <div className="space-y-3">
-                <div className="flex items-center gap-3 text-slate-500">
-                  <Globe className="w-4 h-4" />
-                  <span className="text-sm truncate">{server.uptimeRobotUrl || 'No Uptime URL'}</span>
+              <div className="space-y-2.5">
+                <div className="flex items-center gap-2.5 text-brand-text-muted">
+                  <Globe className="w-3.5 h-3.5 opacity-50" />
+                  <span className="text-xs truncate">{server.uptimeRobotUrl || 'No Uptime URL'}</span>
                 </div>
-                <div className="flex items-center gap-3 text-slate-500">
-                  <MapPin className="w-4 h-4" />
-                  <span className="text-sm">{server.location}</span>
+                <div className="flex items-center gap-2.5 text-brand-text-muted">
+                  <MapPin className="w-3.5 h-3.5 opacity-50" />
+                  <span className="text-xs">{server.location}</span>
                 </div>
               </div>
 
-              <div className="mt-8 pt-6 border-t border-slate-50 flex items-center justify-between">
+              <div className="mt-8 pt-6 border-t border-brand-border flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Activity className="w-4 h-4 text-slate-300" />
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Uptime: 99.9%</span>
+                  <Activity className="w-3.5 h-3.5 text-brand-text-muted opacity-50" />
+                  <span className="text-[10px] font-bold text-brand-text-muted uppercase tracking-widest">Uptime: 99.9%</span>
                 </div>
-                <div className="flex -space-x-2">
-                  <div className="w-6 h-6 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center">
-                    <Cpu className="w-3 h-3 text-slate-400" />
+                <div className="flex -space-x-1.5">
+                  <div className="w-6 h-6 rounded-full bg-brand-bg border border-brand-border flex items-center justify-center">
+                    <Cpu className="w-3 h-3 text-brand-text-muted" />
                   </div>
-                  <div className="w-6 h-6 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center">
-                    <HardDrive className="w-3 h-3 text-slate-400" />
+                  <div className="w-6 h-6 rounded-full bg-brand-bg border border-brand-border flex items-center justify-center">
+                    <HardDrive className="w-3 h-3 text-brand-text-muted" />
                   </div>
-                  <div className="w-6 h-6 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center">
-                    <Shield className="w-3 h-3 text-slate-400" />
+                  <div className="w-6 h-6 rounded-full bg-brand-bg border border-brand-border flex items-center justify-center">
+                    <Shield className="w-3 h-3 text-brand-text-muted" />
                   </div>
                 </div>
               </div>
@@ -419,56 +367,74 @@ export function ServerManagement({ servers }: ServerManagementProps) {
 
       {/* Add/Edit Modal */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setIsAddModalOpen(false)} />
-          <div className="relative bg-white w-full max-w-2xl rounded-[2.5rem] p-10 shadow-2xl animate-in fade-in zoom-in duration-200">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="relative clay-card w-full max-w-xl p-8 animate-in zoom-in-95 duration-200 border-none shadow-2xl">
             <div className="flex items-center justify-between mb-8">
-              <h3 className="text-2xl font-bold text-slate-800">{editingServer ? 'Edit Server' : 'Add New Server'}</h3>
-              <button onClick={() => setIsAddModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
-                <X className="w-6 h-6 text-slate-400" />
+              <h3 className="text-lg font-bold text-brand-text">{editingServer ? 'Edit Server' : 'Add New Server'}</h3>
+              <button 
+                onClick={() => setIsAddModalOpen(false)} 
+                className="p-2 text-brand-text-muted hover:text-brand-text hover:bg-brand-bg rounded-lg transition-all"
+              >
+                <X className="w-5 h-5" />
               </button>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
+              {validationError && (
+                <div className="bg-red-500/10 text-red-500 p-3 rounded-xl text-xs font-bold">
+                  {validationError}
+                </div>
+              )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Server Name</label>
+                  <label className="text-[10px] font-bold text-brand-text-muted uppercase tracking-widest ml-1">Server Name</label>
                   <input 
                     required
                     type="text" 
                     value={formData.name}
                     onChange={(e) => setFormData({...formData, name: e.target.value})}
                     placeholder="e.g. Production API"
-                    className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-brand-sidebar/20 transition-all"
+                    className="clay-input w-full py-3"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Uptime Robot URL</label>
+                  <label className="text-[10px] font-bold text-brand-text-muted uppercase tracking-widest ml-1">URL</label>
+                  <input 
+                    required
+                    type="url" 
+                    value={formData.url}
+                    onChange={(e) => setFormData({...formData, url: e.target.value})}
+                    placeholder="https://example.com"
+                    className="clay-input w-full py-3"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-brand-text-muted uppercase tracking-widest ml-1">Uptime Robot URL</label>
                   <input 
                     type="url" 
                     value={formData.uptimeRobotUrl}
                     onChange={(e) => setFormData({...formData, uptimeRobotUrl: e.target.value})}
                     placeholder="https://stats.uptimerobot.com/..."
-                    className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-brand-sidebar/20 transition-all"
+                    className="clay-input w-full py-3"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Location</label>
+                  <label className="text-[10px] font-bold text-brand-text-muted uppercase tracking-widest ml-1">Location</label>
                   <input 
                     required
                     type="text" 
                     value={formData.location}
                     onChange={(e) => setFormData({...formData, location: e.target.value})}
                     placeholder="e.g. Singapore (AWS)"
-                    className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-brand-sidebar/20 transition-all"
+                    className="clay-input w-full py-3"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Status</label>
+                  <label className="text-[10px] font-bold text-brand-text-muted uppercase tracking-widest ml-1">Status</label>
                   <select 
                     value={formData.status}
                     onChange={(e) => setFormData({...formData, status: e.target.value})}
-                    className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-brand-sidebar/20 transition-all appearance-none"
+                    className="clay-input w-full appearance-none py-3"
                   >
                     <option value="Online">Online</option>
                     <option value="Offline">Offline</option>
@@ -476,35 +442,35 @@ export function ServerManagement({ servers }: ServerManagementProps) {
                   </select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">IP Address</label>
+                  <label className="text-[10px] font-bold text-brand-text-muted uppercase tracking-widest ml-1">IP Address</label>
                   <input 
                     type="text" 
                     value={formData.ipAddress}
                     onChange={(e) => setFormData({...formData, ipAddress: e.target.value})}
                     placeholder="e.g. 192.168.1.1"
-                    className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-brand-sidebar/20 transition-all"
+                    className="clay-input w-full py-3"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Provider</label>
+                  <label className="text-[10px] font-bold text-brand-text-muted uppercase tracking-widest ml-1">Provider</label>
                   <input 
                     type="text" 
                     value={formData.provider}
                     onChange={(e) => setFormData({...formData, provider: e.target.value})}
                     placeholder="e.g. Amazon Web Services"
-                    className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-brand-sidebar/20 transition-all"
+                    className="clay-input w-full py-3"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Notes</label>
+                <label className="text-[10px] font-bold text-brand-text-muted uppercase tracking-widest ml-1">Notes</label>
                 <textarea 
                   value={formData.notes}
                   onChange={(e) => setFormData({...formData, notes: e.target.value})}
                   placeholder="Additional server details..."
                   rows={3}
-                  className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-brand-sidebar/20 transition-all resize-none"
+                  className="clay-input w-full resize-none py-3"
                 />
               </div>
 
@@ -512,13 +478,13 @@ export function ServerManagement({ servers }: ServerManagementProps) {
                 <button 
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="flex-1 px-6 py-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl transition-all"
+                  className="clay-btn flex-1 py-3"
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit"
-                  className="flex-1 px-6 py-4 bg-brand-sidebar hover:bg-brand-blue text-white font-bold rounded-2xl shadow-lg shadow-brand-sidebar/20 transition-all"
+                  className="clay-btn-primary flex-1 py-3"
                 >
                   {editingServer ? 'Update Server' : 'Add Server'}
                 </button>
@@ -530,24 +496,23 @@ export function ServerManagement({ servers }: ServerManagementProps) {
 
       {/* Details Modal */}
       {selectedServer && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setSelectedServer(null)} />
-          <div className="relative bg-white w-full max-w-3xl rounded-[3rem] overflow-hidden shadow-2xl animate-in fade-in slide-in-from-bottom-8 duration-300">
-            <div className="h-48 bg-brand-sidebar relative">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="relative clay-card w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-300 p-0 border-none shadow-2xl">
+            <div className="h-32 bg-brand-primary/10 relative">
               <button 
                 onClick={() => setSelectedServer(null)}
-                className="absolute top-6 right-6 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
+                className="absolute top-4 right-4 p-2 bg-brand-card hover:bg-brand-bg rounded-full text-brand-text-muted transition-colors"
               >
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5" />
               </button>
-              <div className="absolute -bottom-12 left-12 p-6 bg-white rounded-[2rem] shadow-xl border border-slate-100">
+              <div className="absolute -bottom-10 left-8 p-4 bg-brand-card rounded-2xl border border-brand-border">
                 <div className={cn(
-                  "p-4 rounded-2xl",
-                  selectedServer.status === 'Online' ? "bg-emerald-50" : 
-                  selectedServer.status === 'Offline' ? "bg-red-50" : "bg-amber-50"
+                  "p-3 rounded-xl",
+                  selectedServer.status === 'Online' ? "bg-emerald-500/10" : 
+                  selectedServer.status === 'Offline' ? "bg-red-500/10" : "bg-amber-500/10"
                 )}>
                   <Server className={cn(
-                    "w-10 h-10",
+                    "w-8 h-8",
                     selectedServer.status === 'Online' ? "text-emerald-500" : 
                     selectedServer.status === 'Offline' ? "text-red-500" : "text-amber-500"
                   )} />
@@ -555,20 +520,20 @@ export function ServerManagement({ servers }: ServerManagementProps) {
               </div>
             </div>
 
-            <div className="p-12 pt-20">
+            <div className="p-8 pt-14">
               <div className="flex items-center justify-between mb-8">
                 <div>
-                  <h3 className="text-3xl font-black text-slate-800 mb-2">{selectedServer.name}</h3>
-                  <div className="flex items-center gap-4">
+                  <h3 className="text-2xl font-bold text-brand-text mb-1">{selectedServer.name}</h3>
+                  <div className="flex items-center gap-3">
                     <span className={cn(
-                      "px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest",
-                      selectedServer.status === 'Online' ? "bg-emerald-100 text-emerald-600" : 
-                      selectedServer.status === 'Offline' ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-600"
+                      "px-2.5 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-widest",
+                      selectedServer.status === 'Online' ? "bg-emerald-500/10 text-emerald-600" : 
+                      selectedServer.status === 'Offline' ? "bg-red-500/10 text-red-600" : "bg-amber-500/10 text-amber-600"
                     )}>
                       {selectedServer.status}
                     </span>
-                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                      ID: {selectedServer.id}
+                    <span className="text-[10px] font-bold text-brand-text-muted uppercase tracking-widest">
+                      ID: {selectedServer.id.substring(0, 8)}...
                     </span>
                   </div>
                 </div>
@@ -576,66 +541,66 @@ export function ServerManagement({ servers }: ServerManagementProps) {
                   href={selectedServer.url} 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-6 py-3 rounded-2xl font-bold transition-all"
+                  className="clay-btn px-5 py-2 flex items-center gap-2"
                 >
                   <ExternalLink className="w-4 h-4" />
-                  Visit URL
+                  Visit
                 </a>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                <div className="space-y-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-6">
                   <div>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Network Info</p>
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
-                        <div className="flex items-center gap-3">
-                          <Globe className="w-4 h-4 text-slate-400" />
-                          <span className="text-sm font-bold text-slate-600">Uptime Robot</span>
+                    <p className="text-[10px] font-bold text-brand-text-muted uppercase tracking-widest mb-3">Network Info</p>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between p-3 bg-brand-bg rounded-xl border border-brand-border">
+                        <div className="flex items-center gap-2.5">
+                          <Globe className="w-4 h-4 text-brand-text-muted opacity-50" />
+                          <span className="text-xs font-bold text-brand-text">Uptime Robot</span>
                         </div>
-                        <span className="text-sm font-medium text-slate-800 truncate max-w-[200px]">{selectedServer.uptimeRobotUrl || 'N/A'}</span>
+                        <span className="text-xs text-brand-text-muted truncate max-w-[150px]">{selectedServer.uptimeRobotUrl || 'N/A'}</span>
                       </div>
-                      <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
-                        <div className="flex items-center gap-3">
-                          <Shield className="w-4 h-4 text-slate-400" />
-                          <span className="text-sm font-bold text-slate-600">IP Address</span>
+                      <div className="flex items-center justify-between p-3 bg-brand-bg rounded-xl border border-brand-border">
+                        <div className="flex items-center gap-2.5">
+                          <Shield className="w-4 h-4 text-brand-text-muted opacity-50" />
+                          <span className="text-xs font-bold text-brand-text">IP Address</span>
                         </div>
-                        <span className="text-sm font-medium text-slate-800">{selectedServer.ipAddress || 'N/A'}</span>
+                        <span className="text-xs text-brand-text-muted">{selectedServer.ipAddress || 'N/A'}</span>
                       </div>
                     </div>
                   </div>
 
                   <div>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Infrastructure</p>
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
-                        <div className="flex items-center gap-3">
-                          <MapPin className="w-4 h-4 text-slate-400" />
-                          <span className="text-sm font-bold text-slate-600">Location</span>
+                    <p className="text-[10px] font-bold text-brand-text-muted uppercase tracking-widest mb-3">Infrastructure</p>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between p-3 bg-brand-bg rounded-xl border border-brand-border">
+                        <div className="flex items-center gap-2.5">
+                          <MapPin className="w-4 h-4 text-brand-text-muted opacity-50" />
+                          <span className="text-xs font-bold text-brand-text">Location</span>
                         </div>
-                        <span className="text-sm font-medium text-slate-800">{selectedServer.location}</span>
+                        <span className="text-xs text-brand-text-muted">{selectedServer.location}</span>
                       </div>
-                      <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
-                        <div className="flex items-center gap-3">
-                          <Activity className="w-4 h-4 text-slate-400" />
-                          <span className="text-sm font-bold text-slate-600">Provider</span>
+                      <div className="flex items-center justify-between p-3 bg-brand-bg rounded-xl border border-brand-border">
+                        <div className="flex items-center gap-2.5">
+                          <Activity className="w-4 h-4 text-brand-text-muted opacity-50" />
+                          <span className="text-xs font-bold text-brand-text">Provider</span>
                         </div>
-                        <span className="text-sm font-medium text-slate-800">{selectedServer.provider || 'N/A'}</span>
+                        <span className="text-xs text-brand-text-muted">{selectedServer.provider || 'N/A'}</span>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="space-y-8">
+                <div className="space-y-6">
                   <div>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">History</p>
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
-                        <div className="flex items-center gap-3">
-                          <Clock className="w-4 h-4 text-slate-400" />
-                          <span className="text-sm font-bold text-slate-600">Last Checked</span>
+                    <p className="text-[10px] font-bold text-brand-text-muted uppercase tracking-widest mb-3">History</p>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between p-3 bg-brand-bg rounded-xl border border-brand-border">
+                        <div className="flex items-center gap-2.5">
+                          <Clock className="w-4 h-4 text-brand-text-muted opacity-50" />
+                          <span className="text-xs font-bold text-brand-text">Last Checked</span>
                         </div>
-                        <span className="text-sm font-medium text-slate-800">
+                        <span className="text-xs text-brand-text-muted">
                           {(() => {
                             if (!selectedServer.lastCheckedAt) return 'Never';
                             try {
@@ -646,12 +611,12 @@ export function ServerManagement({ servers }: ServerManagementProps) {
                           })()}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
-                        <div className="flex items-center gap-3">
-                          <Plus className="w-4 h-4 text-slate-400" />
-                          <span className="text-sm font-bold text-slate-600">Added On</span>
+                      <div className="flex items-center justify-between p-3 bg-brand-bg rounded-xl border border-brand-border">
+                        <div className="flex items-center gap-2.5">
+                          <Plus className="w-4 h-4 text-brand-text-muted opacity-50" />
+                          <span className="text-xs font-bold text-brand-text">Added On</span>
                         </div>
-                        <span className="text-sm font-medium text-slate-800">
+                        <span className="text-xs text-brand-text-muted">
                           {(() => {
                             if (!selectedServer.createdAt) return 'N/A';
                             try {
@@ -667,8 +632,8 @@ export function ServerManagement({ servers }: ServerManagementProps) {
 
                   {selectedServer.notes && (
                     <div>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Notes</p>
-                      <div className="p-6 bg-slate-50 rounded-2xl italic text-slate-600 text-sm leading-relaxed">
+                      <p className="text-[10px] font-bold text-brand-text-muted uppercase tracking-widest mb-3">Notes</p>
+                      <div className="p-4 rounded-xl bg-brand-bg border border-brand-border text-xs text-brand-text-muted leading-relaxed italic">
                         "{selectedServer.notes}"
                       </div>
                     </div>

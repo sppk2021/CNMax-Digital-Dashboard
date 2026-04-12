@@ -14,7 +14,8 @@ import {
   Line,
   AreaChart,
   Area,
-  Legend
+  Legend,
+  ComposedChart
 } from 'recharts';
 import { 
   Calendar, 
@@ -220,43 +221,43 @@ export function Analytics({ users, sales, expenses }: AnalyticsProps) {
   const COLORS = ['#3b82f6', '#f97316', '#10b981', '#a855f7', '#f43f5e'];
 
   return (
-    <div className="space-y-10">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="space-y-8 pb-12 animate-in fade-in duration-500">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h2 className="text-3xl font-bold text-slate-800 mb-2">Analytics & Reports</h2>
-          <p className="text-slate-500">Deep dive into your monthly performance metrics.</p>
+          <h2 className="text-xl font-bold text-brand-text mb-1">Analytics & Reports</h2>
+          <p className="text-brand-text-muted text-sm">Deep dive into your monthly performance metrics.</p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-3">
           <button
             onClick={handleDownloadReport}
-            className="flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-xl border border-slate-200 shadow-sm transition-all text-sm font-bold"
+            className="clay-btn flex items-center gap-2 text-xs font-bold"
           >
-            <Download className="w-4 h-4" />
+            <Download className="w-3.5 h-3.5" />
             Download Report
           </button>
-          <div className="flex items-center gap-4 bg-white p-2 rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex items-center gap-2 bg-brand-bg p-1 rounded-xl border border-brand-border">
             <button 
               onClick={() => setSelectedMonth(subMonths(selectedMonth, 1))}
-              className="p-2 hover:bg-slate-50 rounded-lg transition-colors text-slate-400 hover:text-brand-sidebar"
+              className="p-1.5 hover:bg-brand-primary/10 rounded-lg transition-colors text-brand-text-muted hover:text-brand-primary"
             >
-              <ChevronLeft className="w-5 h-5" />
+              <ChevronLeft className="w-4 h-4" />
             </button>
-            <div className="flex items-center gap-2 px-4 font-bold text-slate-700">
-              <Calendar className="w-4 h-4 text-brand-sidebar" />
+            <div className="flex items-center gap-2 px-2 text-[10px] font-bold text-brand-text uppercase tracking-widest">
+              <Calendar className="w-3.5 h-3.5 text-brand-primary" />
               {format(selectedMonth, 'MMMM yyyy')}
             </div>
             <button 
               onClick={() => setSelectedMonth(addMonths(selectedMonth, 1))}
-              className="p-2 hover:bg-slate-50 rounded-lg transition-colors text-slate-400 hover:text-brand-sidebar"
+              className="p-1.5 hover:bg-brand-primary/10 rounded-lg transition-colors text-brand-text-muted hover:text-brand-primary"
             >
-              <ChevronRight className="w-5 h-5" />
+              <ChevronRight className="w-4 h-4" />
             </button>
           </div>
         </div>
       </div>
 
       {/* Comparison Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 md:gap-6">
         <MetricCard 
           label="Prev Month Total" 
           value={currentMonthData.prevMonthTotalUsers} 
@@ -291,7 +292,7 @@ export function Analytics({ users, sales, expenses }: AnalyticsProps) {
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         <MetricCard 
           label="Monthly Revenue" 
           value={`${currentMonthData.revenue.toLocaleString()} Ks`} 
@@ -325,73 +326,40 @@ export function Analytics({ users, sales, expenses }: AnalyticsProps) {
       </div>
 
       {/* Revenue Trend & Forecast */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
         {/* Revenue Trend */}
-        <div className="lg:col-span-2 bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
+        <div className="lg:col-span-2 clay-card p-6 md:p-8 border-none shadow-medium">
           <div className="flex items-center justify-between mb-8">
-            <h3 className="text-xl font-bold text-slate-800">Revenue Trend (Last 6 Months)</h3>
-            <div className="flex items-center gap-2 text-[10px] text-emerald-600 font-black bg-emerald-50 px-3 py-1 rounded-full uppercase tracking-widest">
+            <h3 className="text-lg font-bold text-brand-text">Revenue Trend (Last 6 Months)</h3>
+            <div className="flex items-center gap-2 text-[10px] text-emerald-600 font-bold bg-emerald-500/10 px-3 py-1 rounded-full uppercase tracking-widest">
               <TrendingUp className="w-3 h-3" />
               Forecast: +12% Next Month
             </div>
           </div>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={revenueData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} fontWeight={700} tickLine={false} axisLine={false} dy={10} />
-                <YAxis stroke="#94a3b8" fontSize={10} fontWeight={700} tickLine={false} axisLine={false} dx={-10} tickFormatter={(v) => `${v} Ks`} />
+              <ComposedChart data={revenueData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-brand-border)" vertical={false} />
+                <XAxis dataKey="name" stroke="var(--color-brand-text-muted)" fontSize={10} fontWeight={600} tickLine={false} axisLine={false} dy={10} />
+                <YAxis yAxisId="left" stroke="var(--color-brand-text-muted)" fontSize={10} fontWeight={600} tickLine={false} axisLine={false} dx={-10} tickFormatter={(v) => `${v}`} />
+                <YAxis yAxisId="right" orientation="right" stroke="#10b981" fontSize={10} fontWeight={600} tickLine={false} axisLine={false} dx={10} tickFormatter={(v) => `${v}`} />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: '#fff', border: '1px solid #f1f5f9', borderRadius: '16px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                  itemStyle={{ fontSize: '12px', fontWeight: 700 }}
+                  contentStyle={{ backgroundColor: 'var(--color-brand-card)', border: '1px solid var(--color-brand-border)', borderRadius: '12px', boxShadow: 'var(--shadow-medium)', padding: '10px' }}
+                  itemStyle={{ fontSize: '11px', fontWeight: 600 }}
+                  labelStyle={{ color: 'var(--color-brand-text-muted)', marginBottom: '6px', fontWeight: 700, textTransform: 'uppercase', fontSize: '9px' }}
                 />
-                <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }} />
-                <Bar dataKey="new" name="New Sales" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="renewal" name="Renewals" fill="#f97316" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Profit vs Expenses */}
-        <div className="lg:col-span-3 bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
-          <div className="flex items-center justify-between mb-8">
-            <h3 className="text-xl font-bold text-slate-800">Profit vs Expenses (Last 6 Months)</h3>
-            <div className="flex items-center gap-2 text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-              Financial Overview
-            </div>
-          </div>
-          <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={revenueData}>
-                <defs>
-                  <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                  </linearGradient>
-                  <linearGradient id="colorExpenses" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor="#f43f5e" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} fontWeight={700} tickLine={false} axisLine={false} dy={10} />
-                <YAxis stroke="#94a3b8" fontSize={10} fontWeight={700} tickLine={false} axisLine={false} dx={-10} tickFormatter={(v) => `${v} Ks`} />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#fff', border: '1px solid #f1f5f9', borderRadius: '16px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                  itemStyle={{ fontSize: '12px', fontWeight: 700 }}
-                />
-                <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }} />
-                <Area type="monotone" dataKey="profit" name="Net Profit" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorProfit)" />
-                <Area type="monotone" dataKey="expenses" name="Expenses" stroke="#f43f5e" strokeWidth={3} fillOpacity={1} fill="url(#colorExpenses)" />
-              </AreaChart>
+                <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }} />
+                <Bar yAxisId="left" dataKey="new" name="New Sales" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                <Bar yAxisId="left" dataKey="renewal" name="Renewals" fill="#f97316" radius={[4, 4, 0, 0]} />
+                <Line yAxisId="right" type="monotone" dataKey="profit" name="Net Profit" stroke="#10b981" strokeWidth={3} dot={{ r: 4, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} />
+              </ComposedChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Sales Breakdown */}
-        <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
-          <h3 className="text-xl font-bold text-slate-800 mb-8">Sales Breakdown</h3>
+        <div className="clay-card p-6 md:p-8 border-none shadow-medium">
+          <h3 className="text-lg font-bold text-brand-text mb-8">Sales Breakdown</h3>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -409,36 +377,74 @@ export function Analytics({ users, sales, expenses }: AnalyticsProps) {
                   ))}
                 </Pie>
                 <Tooltip 
-                  contentStyle={{ backgroundColor: '#fff', border: '1px solid #f1f5f9', borderRadius: '16px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                  contentStyle={{ backgroundColor: 'var(--color-brand-card)', border: '1px solid var(--color-brand-border)', borderRadius: '12px', boxShadow: 'var(--shadow-medium)', padding: '10px' }}
                 />
-                <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase' }}/>
+                <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '10px', fontWeight: 600, textTransform: 'uppercase' }}/>
               </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Profit vs Expenses */}
+        <div className="lg:col-span-3 clay-card p-6 md:p-8 border-none shadow-medium">
+          <div className="flex items-center justify-between mb-8">
+            <h3 className="text-lg font-bold text-brand-text">Profit vs Expenses (Last 6 Months)</h3>
+            <div className="flex items-center gap-2 text-[10px] text-brand-text-muted font-bold uppercase tracking-widest">
+              Financial Overview
+            </div>
+          </div>
+          <div className="h-[300px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={revenueData}>
+                <defs>
+                  <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/>
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                  </linearGradient>
+                  <linearGradient id="colorExpenses" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.1}/>
+                    <stop offset="95%" stopColor="#f43f5e" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-brand-border)" vertical={false} />
+                <XAxis dataKey="name" stroke="var(--color-brand-text-muted)" fontSize={10} fontWeight={600} tickLine={false} axisLine={false} dy={10} />
+                <YAxis stroke="var(--color-brand-text-muted)" fontSize={10} fontWeight={600} tickLine={false} axisLine={false} dx={-10} tickFormatter={(v) => `${v}`} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: 'var(--color-brand-card)', border: '1px solid var(--color-brand-border)', borderRadius: '12px', boxShadow: 'var(--shadow-medium)', padding: '10px' }}
+                  itemStyle={{ fontSize: '11px', fontWeight: 600 }}
+                  labelStyle={{ color: 'var(--color-brand-text-muted)', marginBottom: '6px', fontWeight: 700, textTransform: 'uppercase', fontSize: '9px' }}
+                />
+                <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }} />
+                <Area type="monotone" dataKey="profit" name="Net Profit" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorProfit)" />
+                <Area type="monotone" dataKey="expenses" name="Expenses" stroke="#f43f5e" strokeWidth={3} fillOpacity={1} fill="url(#colorExpenses)" />
+              </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
       </div>
 
       {/* Churn Rate & Plan Distribution */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
         {/* Churn Rate Trend */}
-        <div className="lg:col-span-2 bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
+        <div className="lg:col-span-2 clay-card p-6 md:p-8 border-none shadow-medium">
           <div className="flex items-center justify-between mb-8">
-            <h3 className="text-xl font-bold text-slate-800">User Churn Rate (%)</h3>
-            <div className="flex items-center gap-2 text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+            <h3 className="text-lg font-bold text-brand-text">User Churn Rate (%)</h3>
+            <div className="flex items-center gap-2 text-[10px] text-brand-text-muted font-bold uppercase tracking-widest">
               Last 6 Months
             </div>
           </div>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={churnData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} fontWeight={700} tickLine={false} axisLine={false} dy={10} />
-                <YAxis stroke="#94a3b8" fontSize={10} fontWeight={700} tickLine={false} axisLine={false} dx={-10} tickFormatter={(v) => `${v}%`} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-brand-border)" vertical={false} />
+                <XAxis dataKey="name" stroke="var(--color-brand-text-muted)" fontSize={10} fontWeight={600} tickLine={false} axisLine={false} dy={10} />
+                <YAxis stroke="var(--color-brand-text-muted)" fontSize={10} fontWeight={600} tickLine={false} axisLine={false} dx={-10} tickFormatter={(v) => `${v}%`} />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: '#fff', border: '1px solid #f1f5f9', borderRadius: '16px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                  itemStyle={{ fontSize: '12px', fontWeight: 700 }}
+                  contentStyle={{ backgroundColor: 'var(--color-brand-card)', border: '1px solid var(--color-brand-border)', borderRadius: '12px', boxShadow: 'var(--shadow-medium)', padding: '10px' }}
+                  itemStyle={{ fontSize: '11px', fontWeight: 600 }}
+                  labelStyle={{ color: 'var(--color-brand-text-muted)', marginBottom: '6px', fontWeight: 700, textTransform: 'uppercase', fontSize: '9px' }}
                 />
-                <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }} />
+                <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }} />
                 <Line 
                   type="monotone" 
                   dataKey="rate" 
@@ -454,8 +460,8 @@ export function Analytics({ users, sales, expenses }: AnalyticsProps) {
         </div>
 
         {/* Plan Distribution */}
-        <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
-          <h3 className="text-xl font-bold text-slate-800 mb-8">Plan Distribution (Active)</h3>
+        <div className="clay-card p-6 md:p-8 border-none shadow-medium">
+          <h3 className="text-lg font-bold text-brand-text mb-8">Plan Distribution (Active)</h3>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -473,9 +479,9 @@ export function Analytics({ users, sales, expenses }: AnalyticsProps) {
                   ))}
                 </Pie>
                 <Tooltip 
-                  contentStyle={{ backgroundColor: '#fff', border: '1px solid #f1f5f9', borderRadius: '16px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                  contentStyle={{ backgroundColor: 'var(--color-brand-card)', border: '1px solid var(--color-brand-border)', borderRadius: '12px', boxShadow: 'var(--shadow-medium)', padding: '10px' }}
                 />
-                <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase' }}/>
+                <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '10px', fontWeight: 600, textTransform: 'uppercase' }}/>
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -483,82 +489,82 @@ export function Analytics({ users, sales, expenses }: AnalyticsProps) {
       </div>
 
       {/* Monthly Lists */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
-          <h3 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-3">
-            <div className="p-2 bg-blue-50 rounded-lg">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+        <div className="clay-card p-6 md:p-8 border-none shadow-medium">
+          <h3 className="text-lg font-bold text-brand-text mb-6 flex items-center gap-3">
+            <div className="p-2 bg-blue-500/10 rounded-lg">
               <UserPlus className="w-5 h-5 text-blue-500" />
             </div>
             New Users
           </h3>
-          <div className="space-y-4 max-h-[400px] overflow-auto pr-2 custom-scrollbar">
+          <div className="space-y-3 max-h-[400px] overflow-auto pr-2 custom-scrollbar">
             {currentMonthData.newUsers.map(u => (
-              <div key={u.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 group hover:border-blue-200 transition-all">
+              <div key={u.id} className="flex items-center justify-between p-4 bg-brand-bg rounded-2xl border border-brand-border group hover:border-blue-500/30 transition-all">
                 <div>
-                  <p className="font-bold text-slate-700">{u.name}</p>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                  <p className="text-sm font-bold text-brand-text">{u.name}</p>
+                  <p className="text-[10px] font-bold text-brand-text-muted uppercase tracking-widest mt-0.5">
                     Joined: {(() => {
                       if (!u.createdAt) return 'N/A';
                       try { return format(parseISO(u.createdAt), 'MMM d, yyyy'); } catch(e) { return 'Invalid Date'; }
                     })()}
                   </p>
                 </div>
-                <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-1 rounded uppercase tracking-widest">NEW</span>
+                <span className="text-[10px] font-bold text-blue-600 bg-blue-500/10 px-2 py-1 rounded uppercase tracking-widest">NEW</span>
               </div>
             ))}
-            {currentMonthData.newUsers.length === 0 && <p className="text-center text-slate-400 py-10 text-xs font-medium">No new users.</p>}
+            {currentMonthData.newUsers.length === 0 && <p className="text-center text-brand-text-muted py-10 text-[10px] font-bold uppercase tracking-widest">No new users</p>}
           </div>
         </div>
 
-        <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
-          <h3 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-3">
-            <div className="p-2 bg-orange-50 rounded-lg">
+        <div className="clay-card p-6 md:p-8 border-none shadow-medium">
+          <h3 className="text-lg font-bold text-brand-text mb-6 flex items-center gap-3">
+            <div className="p-2 bg-orange-500/10 rounded-lg">
               <RefreshCw className="w-5 h-5 text-orange-500" />
             </div>
             Renewed Users
           </h3>
-          <div className="space-y-4 max-h-[400px] overflow-auto pr-2 custom-scrollbar">
+          <div className="space-y-3 max-h-[400px] overflow-auto pr-2 custom-scrollbar">
             {currentMonthData.renewals.map(s => (
-              <div key={s.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 group hover:border-orange-200 transition-all">
+              <div key={s.id} className="flex items-center justify-between p-4 bg-brand-bg rounded-2xl border border-brand-border group hover:border-orange-500/30 transition-all">
                 <div>
-                  <p className="font-bold text-slate-700">{s.userName}</p>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                  <p className="text-sm font-bold text-brand-text">{s.userName}</p>
+                  <p className="text-[10px] font-bold text-brand-text-muted uppercase tracking-widest mt-0.5">
                     Renewed: {(() => {
                       if (!s.date) return 'N/A';
                       try { return format(parseISO(s.date), 'MMM d, yyyy'); } catch(e) { return 'Invalid Date'; }
                     })()}
                   </p>
                 </div>
-                <span className="text-[10px] font-black text-orange-600 bg-orange-50 px-2 py-1 rounded uppercase tracking-widest">RENEWED</span>
+                <span className="text-[10px] font-bold text-orange-600 bg-orange-500/10 px-2 py-1 rounded uppercase tracking-widest">RENEWED</span>
               </div>
             ))}
-            {currentMonthData.renewals.length === 0 && <p className="text-center text-slate-400 py-10 text-xs font-medium">No renewals.</p>}
+            {currentMonthData.renewals.length === 0 && <p className="text-center text-brand-text-muted py-10 text-[10px] font-bold uppercase tracking-widest">No renewals</p>}
           </div>
         </div>
 
-        <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
-          <h3 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-3">
-            <div className="p-2 bg-red-50 rounded-lg">
+        <div className="clay-card p-6 md:p-8 border-none shadow-medium">
+          <h3 className="text-lg font-bold text-brand-text mb-6 flex items-center gap-3">
+            <div className="p-2 bg-red-500/10 rounded-lg">
               <UserMinus className="w-5 h-5 text-red-500" />
             </div>
             Expired Users
           </h3>
-          <div className="space-y-4 max-h-[400px] overflow-auto pr-2 custom-scrollbar">
+          <div className="space-y-3 max-h-[400px] overflow-auto pr-2 custom-scrollbar">
             {currentMonthData.expiredThisMonth.map(s => (
-              <div key={s.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 group hover:border-red-200 transition-all">
+              <div key={s.id} className="flex items-center justify-between p-4 bg-brand-bg rounded-2xl border border-brand-border group hover:border-red-500/30 transition-all">
                 <div>
-                  <p className="font-bold text-slate-700">{s.userName}</p>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                  <p className="text-sm font-bold text-brand-text">{s.userName}</p>
+                  <p className="text-[10px] font-bold text-brand-text-muted uppercase tracking-widest mt-0.5">
                     Expired: {(() => {
                       if (!s.date) return 'N/A';
                       try { return format(parseISO(s.date), 'MMM d, yyyy'); } catch(e) { return 'Invalid Date'; }
                     })()}
                   </p>
                 </div>
-                <span className="text-[10px] font-black text-red-600 bg-red-50 px-2 py-1 rounded uppercase tracking-widest">EXPIRED</span>
+                <span className="text-[10px] font-bold text-red-600 bg-red-500/10 px-2 py-1 rounded uppercase tracking-widest">EXPIRED</span>
               </div>
             ))}
-            {currentMonthData.expiredThisMonth.length === 0 && <p className="text-center text-slate-400 py-10 text-xs font-medium">No expired users.</p>}
+            {currentMonthData.expiredThisMonth.length === 0 && <p className="text-center text-brand-text-muted py-10 text-[10px] font-bold uppercase tracking-widest">No expired users</p>}
           </div>
         </div>
       </div>
@@ -571,24 +577,24 @@ function MetricCard({ label, value, prevValue, icon: Icon, color, isCurrency, sh
   const isPositive = diff >= 0;
 
   const colorClasses: any = {
-    blue: 'text-blue-500 bg-blue-50',
-    orange: 'text-orange-500 bg-orange-50',
-    red: 'text-red-500 bg-red-50',
-    emerald: 'text-emerald-500 bg-emerald-50',
-    purple: 'text-purple-500 bg-purple-50',
+    blue: 'text-blue-500 bg-blue-500/10',
+    orange: 'text-orange-500 bg-orange-500/10',
+    red: 'text-red-500 bg-red-500/10',
+    emerald: 'text-emerald-500 bg-emerald-500/10',
+    purple: 'text-purple-500 bg-purple-500/10',
   };
 
   const displayValue = showSign && typeof value === 'number' ? `${value > 0 ? '+' : ''}${value}` : value;
 
   return (
-    <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all">
+    <div className="clay-card p-5 border-none shadow-medium group">
       <div className="flex items-center justify-between mb-4">
-        <div className={cn("p-3 rounded-xl", colorClasses[color])}>
-          <Icon className="w-5 h-5" />
+        <div className={cn("p-2.5 rounded-xl", colorClasses[color])}>
+          <Icon className="w-4.5 h-4.5" />
         </div>
         {typeof value === 'number' && typeof prevValue === 'number' && (
           <div className={cn(
-            "flex items-center gap-1 text-[10px] font-black uppercase tracking-widest",
+            "flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest",
             isPositive ? "text-emerald-600" : "text-red-600"
           )}>
             {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
@@ -596,8 +602,8 @@ function MetricCard({ label, value, prevValue, icon: Icon, color, isCurrency, sh
           </div>
         )}
       </div>
-      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">{label}</p>
-      <h4 className="text-2xl font-black text-slate-800">{displayValue}</h4>
+      <p className="text-[10px] text-brand-text-muted font-bold uppercase tracking-widest mb-1">{label}</p>
+      <h4 className="text-xl font-bold text-brand-text">{displayValue}</h4>
     </div>
   );
 }

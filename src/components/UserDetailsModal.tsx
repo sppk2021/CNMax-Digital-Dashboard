@@ -1,5 +1,5 @@
-import React from 'react';
-import { X, Calendar, DollarSign, History, User, Clock, Download } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, Calendar, DollarSign, History, User, Clock, Download, Eye, EyeOff } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { cn, getStatus } from '../utils';
 import { motion, AnimatePresence } from 'motion/react';
@@ -12,6 +12,7 @@ interface UserDetailsModalProps {
 }
 
 export function UserDetailsModal({ isOpen, onClose, user, sales }: UserDetailsModalProps) {
+  const [showPassword, setShowPassword] = useState(false);
   if (!user) return null;
 
   const userSales = sales
@@ -115,8 +116,7 @@ export function UserDetailsModal({ isOpen, onClose, user, sales }: UserDetailsMo
             </div>
 
             <div className="p-8 space-y-8">
-              {/* Subscription Info */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
                   <div className="flex items-center gap-2 text-slate-400 text-xs uppercase tracking-widest font-bold mb-3">
                     <User className="w-4 h-4" />
@@ -146,6 +146,20 @@ export function UserDetailsModal({ isOpen, onClose, user, sales }: UserDetailsMo
                       }
                     })()}
                   </p>
+                </div>
+                <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
+                  <div className="flex items-center gap-2 text-slate-400 text-xs uppercase tracking-widest font-bold mb-3">
+                    <User className="w-4 h-4" />
+                    Password
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <p className="text-slate-800 font-bold">
+                      {showPassword ? (user.password || 'N/A') : '••••••••'}
+                    </p>
+                    <button onClick={() => setShowPassword(!showPassword)} className="text-slate-400 hover:text-slate-600">
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
                 <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
                   <div className="flex items-center gap-2 text-slate-400 text-xs uppercase tracking-widest font-bold mb-3">

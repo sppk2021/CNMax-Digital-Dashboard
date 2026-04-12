@@ -13,6 +13,7 @@ interface UserModalProps {
 
 export function UserModal({ isOpen, onClose, plans }: UserModalProps) {
   const [name, setName] = useState('');
+  const [password, setPassword] = useState('');
   const [selectedPlanId, setSelectedPlanId] = useState('');
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
@@ -21,7 +22,7 @@ export function UserModal({ isOpen, onClose, plans }: UserModalProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !selectedPlanId) return;
+    if (!name.trim() || !selectedPlanId || !password.trim()) return;
 
     const plan = plans.find(p => p.id === selectedPlanId);
     if (!plan) return;
@@ -33,6 +34,9 @@ export function UserModal({ isOpen, onClose, plans }: UserModalProps) {
       
       const userDoc = {
         name: name.trim(),
+        // SECURITY WARNING: Storing passwords in plaintext is insecure.
+        // In a production environment, use Firebase Authentication or hash the password.
+        password: password.trim(),
         subscriptionStartDate: now.toISOString(),
         expiryDate: expiry.toISOString(),
         status: 'Active',
@@ -59,6 +63,7 @@ export function UserModal({ isOpen, onClose, plans }: UserModalProps) {
 
       onClose();
       setName('');
+      setPassword('');
       setSelectedPlanId('');
       setNotes('');
     } catch (error) {
@@ -88,6 +93,18 @@ export function UserModal({ isOpen, onClose, plans }: UserModalProps) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. John Doe (FB)"
+              className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-brand-sidebar/20 transition-all text-slate-800"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Password</label>
+            <input 
+              type="password" 
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
               className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-brand-sidebar/20 transition-all text-slate-800"
             />
           </div>

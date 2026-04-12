@@ -89,56 +89,56 @@ export function PlanManagement({ plans }: PlanManagementProps) {
   };
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 pb-12 animate-in fade-in duration-500">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h2 className="text-3xl font-bold text-slate-800 mb-2">Plan Configuration</h2>
-          <p className="text-slate-500">Manage subscription durations and pricing.</p>
+          <h2 className="text-xl font-bold text-brand-text mb-1">Plan Configuration</h2>
+          <p className="text-brand-text-muted text-sm">Manage subscription durations and pricing.</p>
         </div>
         {!isAdding && (
           <button 
             onClick={() => setIsAdding(true)}
-            className="flex items-center gap-2 px-6 py-3 bg-brand-sidebar hover:bg-brand-sidebar/90 rounded-2xl text-white transition-all text-sm font-bold shadow-lg shadow-brand-sidebar/20"
+            className="clay-btn-primary flex items-center gap-2 text-xs font-bold"
           >
-            <Plus className="w-5 h-5" />
-            Add New Plan
+            <Plus className="w-3.5 h-3.5" />
+            Add Plan
           </button>
         )}
       </div>
 
       {isAdding && (
-        <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-xl animate-in fade-in slide-in-from-top-4">
-          <h3 className="text-xl font-black text-slate-800 mb-8">{editingId ? 'Edit Plan' : 'Create New Plan'}</h3>
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="clay-card p-6 md:p-8 animate-in fade-in slide-in-from-top-4 border-none shadow-medium bg-brand-bg/50">
+          <h3 className="text-lg font-bold text-brand-text mb-8">{editingId ? 'Edit Plan' : 'Create New Plan'}</h3>
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Plan Name</label>
+              <label className="block text-[10px] font-bold text-brand-text-muted uppercase tracking-widest mb-2.5">Plan Name</label>
               <input 
                 type="text" 
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. 1 Month"
-                className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3.5 px-5 focus:outline-none focus:border-brand-sidebar transition-colors text-slate-700 font-medium"
+                className="clay-input w-full py-2.5"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Duration (Days)</label>
+              <label className="block text-[10px] font-bold text-brand-text-muted uppercase tracking-widest mb-2.5">Duration (Days)</label>
               <div className="relative">
-                <Clock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
+                <Clock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-text-muted opacity-50" />
                 <input 
                   type="number" 
                   required
                   value={duration}
                   onChange={(e) => setDuration(e.target.value)}
                   placeholder="30"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3.5 pl-12 pr-5 focus:outline-none focus:border-brand-sidebar transition-colors text-slate-700 font-medium"
+                  className="clay-input w-full pl-11 py-2.5"
                 />
               </div>
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Price (Ks)</label>
+              <label className="block text-[10px] font-bold text-brand-text-muted uppercase tracking-widest mb-2.5">Price (Ks)</label>
               <div className="relative">
-                <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
+                <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-text-muted opacity-50" />
                 <input 
                   type="number" 
                   step="1"
@@ -146,98 +146,97 @@ export function PlanManagement({ plans }: PlanManagementProps) {
                   value={price}
                   onChange={(e) => setPrice(e.target.value)}
                   placeholder="25000"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3.5 pl-12 pr-5 focus:outline-none focus:border-brand-sidebar transition-colors text-slate-700 font-medium"
+                  className="clay-input w-full pl-11 py-2.5"
                 />
               </div>
             </div>
-            <div className="md:col-span-3 flex items-center gap-4 justify-end pt-4">
+            <div className="md:col-span-3 flex items-center gap-4 justify-end pt-6 border-t border-brand-border">
               <button 
                 type="button"
                 onClick={resetForm}
-                className="px-8 py-3.5 bg-slate-100 hover:bg-slate-200 rounded-2xl text-sm font-bold text-slate-600 transition-colors"
+                className="clay-btn px-6 py-2 text-xs font-bold"
               >
                 Cancel
               </button>
               <button 
                 type="submit"
                 disabled={loading}
-                className="flex items-center gap-2 px-10 py-3.5 bg-brand-sidebar hover:bg-brand-sidebar/90 disabled:opacity-50 rounded-2xl text-white font-black transition-all shadow-lg shadow-brand-sidebar/20"
+                className="clay-btn-primary px-8 py-2 flex items-center gap-2 text-xs font-bold"
               >
-                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (editingId ? 'Update Plan' : 'Save Plan')}
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : (editingId ? 'Update Plan' : 'Save Plan')}
               </button>
             </div>
           </form>
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {plans.map((plan) => (
           <div 
             key={plan.id}
-            className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-md transition-all group relative"
+            className="clay-card p-6 group relative border-none shadow-medium hover:shadow-lg transition-all"
           >
             <div className="flex items-start justify-between mb-6">
-              <div className="p-4 bg-brand-sidebar/10 rounded-2xl">
-                <Clock className="w-8 h-8 text-brand-sidebar" />
+              <div className="p-2.5 bg-brand-primary/10 rounded-xl">
+                <Clock className="w-5 h-5 text-brand-primary" />
               </div>
               <div className="flex items-center gap-2">
                 <button 
                   onClick={() => startEdit(plan)}
-                  className="p-2.5 text-slate-400 hover:text-brand-sidebar hover:bg-brand-sidebar/5 rounded-xl transition-colors"
+                  className="p-2 text-brand-text-muted hover:text-brand-primary hover:bg-brand-bg rounded-lg transition-all"
                 >
-                  <Edit2 className="w-5 h-5" />
+                  <Edit2 className="w-3.5 h-3.5" />
                 </button>
                 <button 
                   onClick={() => handleDeleteClick(plan.id)}
-                  className="p-2.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"
+                  className="p-2 text-brand-text-muted hover:text-red-500 hover:bg-brand-bg rounded-lg transition-all"
                 >
-                  <Trash2 className="w-5 h-5" />
+                  <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>
-            <h3 className="text-2xl font-black text-slate-800 mb-2">{plan.name}</h3>
-            <p className="text-sm font-medium text-slate-400 mb-6">{plan.durationDays} Days Duration</p>
-            <div className="flex items-center justify-between pt-6 border-t border-slate-50">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Price</span>
-              <span className="text-2xl font-black text-emerald-600">{plan.price.toLocaleString()} Ks</span>
+            <h3 className="text-lg font-bold text-brand-text mb-1">{plan.name}</h3>
+            <p className="text-[10px] font-bold text-brand-text-muted uppercase tracking-widest mb-6">{plan.durationDays} Days Duration</p>
+            <div className="flex items-center justify-between pt-6 border-t border-brand-border">
+              <span className="text-[10px] font-bold text-brand-text-muted uppercase tracking-widest">Price</span>
+              <span className="text-lg font-bold text-emerald-600">{plan.price.toLocaleString()} Ks</span>
             </div>
           </div>
         ))}
         {plans.length === 0 && !isAdding && (
-          <div className="md:col-span-3 py-24 text-center bg-slate-50/50 rounded-[3rem] border-2 border-dashed border-slate-200">
-            <AlertCircle className="w-16 h-16 text-slate-200 mx-auto mb-6" />
-            <p className="text-slate-400 font-bold text-lg">No plans configured yet.</p>
-            <p className="text-slate-300 text-sm mt-2">Add your first plan to get started.</p>
+          <div className="md:col-span-3 py-24 text-center clay-card border-none shadow-medium">
+            <AlertCircle className="w-12 h-12 text-brand-text-muted/20 mx-auto mb-4" />
+            <p className="text-brand-text font-bold">No plans configured yet.</p>
+            <p className="text-brand-text-muted text-xs mt-1">Add your first plan to get started.</p>
           </div>
         )}
       </div>
 
       {/* Delete Confirmation Modal */}
       {deleteConfirmId && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setDeleteConfirmId(null)} />
-          <div className="relative bg-white w-full max-w-md rounded-[2.5rem] overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="relative clay-card w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200 border-none shadow-2xl">
             <div className="p-8 text-center">
-              <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                <AlertCircle className="w-10 h-10 text-red-500" />
+              <div className="w-16 h-16 bg-red-500/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <AlertCircle className="w-8 h-8 text-red-500" />
               </div>
-              <h3 className="text-2xl font-black text-slate-800 mb-2">Delete Plan?</h3>
-              <p className="text-slate-500 font-medium mb-8">
+              <h3 className="text-lg font-bold text-brand-text mb-2">Delete Plan?</h3>
+              <p className="text-brand-text-muted text-sm mb-8">
                 Are you sure you want to permanently delete this plan? This action cannot be undone.
               </p>
-              <div className="flex gap-4">
+              <div className="flex gap-3">
                 <button
                   onClick={() => setDeleteConfirmId(null)}
-                  className="flex-1 px-6 py-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl transition-all"
+                  className="clay-btn flex-1 py-2.5 text-xs font-bold"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={confirmDelete}
                   disabled={loading}
-                  className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white font-bold rounded-2xl shadow-lg shadow-red-500/20 transition-all"
+                  className="flex-1 flex items-center justify-center gap-2 px-6 py-2.5 bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white font-bold rounded-xl transition-all text-xs"
                 >
-                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Delete'}
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Delete'}
                 </button>
               </div>
             </div>

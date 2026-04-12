@@ -28,15 +28,14 @@ service cloud.firestore {
     //
     // ===============================================================
 
-    // WARNING: Since the app uses a custom bcrypt authentication system instead of 
-    // Firebase Authentication, Firestore cannot verify the user's identity securely.
-    // These rules have been opened to allow the custom auth to function.
     function isAuthenticated() {
-      return true; 
+      return request.auth != null; 
     }
 
     function isAdmin() {
-      return true; 
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/admins/$(request.auth.token.email)).data.role == 'admin' ||
+          (request.auth.token.email == "sawpyaephyokyaw777@gmail.com" && request.auth.token.email_verified == true)); // Default admin
     }
 
     function isValidAdmin(data) {
@@ -46,14 +45,15 @@ service cloud.firestore {
     }
 
     match /admins/{email} {
-      allow read, write: if true;
+      allow read: if isAuthenticated() && (request.auth.token.email == email || isAdmin());
+      allow write: if isAdmin();
     }
 
     function isValidUser(data) {
       return data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
              data.subscriptionStartDate is string &&
              data.expiryDate is string &&
-             data.status in ['Active', 'Expired'] &&
+             data.status in ['Active', 'Expired', 'Upcoming'] &&
              data.createdAt is string &&
              (!('lastRenewedAt' in data) || data.lastRenewedAt is string) &&
              (!('notes' in data) || data.notes is string) &&
@@ -64,7 +64,7 @@ service cloud.firestore {
       return data.userId is string &&
              data.userName is string &&
              data.date is string &&
-             data.amount is number &&
+             data.amount is number && data.amount >= 0 &&
              data.type in ['New', 'Renewal', 'Expired'] &&
              (!('planName' in data) || data.planName is string) &&
              (!('notes' in data) || data.notes is string);
@@ -99,23 +99,38 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read, create, update, delete: if true;
+      allow read: if isAdmin();
+      allow create: if isAdmin() && isValidUser(request.resource.data);
+      allow update: if isAdmin() && isValidUser(request.resource.data);
+      allow delete: if isAdmin();
     }
 
     match /sales/{saleId} {
-      allow read, create, update, delete: if true;
+      allow read: if isAdmin();
+      allow create: if isAdmin() && isValidSale(request.resource.data);
+      allow update: if isAdmin() && isValidSale(request.resource.data);
+      allow delete: if isAdmin();
     }
 
     match /plans/{planId} {
-      allow read, write: if true;
+      allow read: if isAdmin();
+      allow create: if isAdmin() && isValidPlan(request.resource.data);
+      allow update: if isAdmin() && isValidPlan(request.resource.data);
+      allow delete: if isAdmin();
     }
 
     match /expenses/{expenseId} {
-      allow read, create, update, delete: if true;
+      allow read: if isAdmin();
+      allow create: if isAdmin() && isValidExpense(request.resource.data);
+      allow update: if isAdmin() && isValidExpense(request.resource.data);
+      allow delete: if isAdmin();
     }
 
     match /servers/{serverId} {
-      allow read, create, update, delete: if true;
+      allow read: if isAdmin();
+      allow create: if isAdmin() && isValidServer(request.resource.data);
+      allow update: if isAdmin() && isValidServer(request.resource.data);
+      allow delete: if isAdmin();
     }
   }
 }
