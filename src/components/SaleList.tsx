@@ -43,7 +43,8 @@ export function SaleList({ sales }: SaleListProps) {
   const filteredSales = useMemo(() => {
     return sales.filter(sale => {
       const userName = sale.userName || '';
-      const matchesSearch = userName.toLowerCase().includes(searchTerm.toLowerCase());
+      const search = (searchTerm || '').toLowerCase();
+      const matchesSearch = userName.toLowerCase().includes(search);
       const matchesType = typeFilter === 'All' || sale.type === typeFilter;
       
       let matchesDate = true;

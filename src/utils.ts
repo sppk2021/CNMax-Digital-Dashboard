@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { isAfter, parseISO, isWithinInterval } from 'date-fns';
+import { isAfter, parseISO, isWithinInterval, startOfMonth, endOfMonth } from 'date-fns';
 import { toZonedTime, formatInTimeZone } from 'date-fns-tz';
 import { auth } from './firebase';
 
@@ -84,19 +84,34 @@ export function getNow(): Date {
 /**
  * Standardized status calculation using UTC comparisons.
  */
-export function getStatus(expiryDate: string, startDate?: string): 'Active' | 'Expired' | 'Upcoming' {
+export function getStatus(expiryDate: any, startDate?: any): 'Active' | 'Expired' | 'Upcoming' {
   if (!expiryDate) return 'Expired';
   const now = getNow();
-  let expiry = new Date(0);
-  try {
+  
+  let expiry: Date;
+  if (typeof expiryDate === 'string') {
     expiry = parseISO(expiryDate);
-  } catch(e) {
+  } else if (expiryDate && typeof expiryDate.toDate === 'function') {
+    expiry = expiryDate.toDate();
+  } else if (expiryDate instanceof Date) {
+    expiry = expiryDate;
+  } else {
     return 'Expired';
   }
   
   if (startDate) {
     try {
-      const start = parseISO(startDate);
+      let start: Date;
+      if (typeof startDate === 'string') {
+        start = parseISO(startDate);
+      } else if (startDate && typeof startDate.toDate === 'function') {
+        start = startDate.toDate();
+      } else if (startDate instanceof Date) {
+        start = startDate;
+      } else {
+        throw new Error('Invalid start date');
+      }
+      
       // If subscription hasn't started yet, it's upcoming
       if (isAfter(start, now)) {
         return 'Upcoming';
@@ -121,22 +136,27 @@ export function isSameMonth(date1: Date, date2: Date) {
  * Returns the start and end of the month for a given date in UTC.
  */
 export function getMonthInterval(date: Date) {
-  const year = parseInt(formatInTimeZone(date, TIMEZONE, 'yyyy'));
-  const month = parseInt(formatInTimeZone(date, TIMEZONE, 'MM')) - 1;
-  
-  const start = new Date(Date.UTC(year, month, 1, 0, 0, 0, 0));
-  const end = new Date(Date.UTC(year, month + 1, 0, 23, 59, 59, 999));
-  
+  const start = startOfMonth(date);
+  const end = endOfMonth(date);
   return { start, end };
 }
 
 /**
- * Checks if an ISO date string falls within the month of the provided monthDate.
+ * Checks if an ISO date string or Firestore Timestamp falls within the month of the provided monthDate.
  */
-export function isInMonth(dateStr: string | undefined | null, monthDate: Date) {
+export function isInMonth(dateStr: any, monthDate: Date) {
   if (!dateStr) return false;
   try {
-    const date = parseISO(dateStr);
+    let date: Date;
+    if (typeof dateStr === 'string') {
+      date = parseISO(dateStr);
+    } else if (dateStr && typeof dateStr.toDate === 'function') {
+      date = dateStr.toDate();
+    } else if (dateStr instanceof Date) {
+      date = dateStr;
+    } else {
+      return false;
+    }
     const interval = getMonthInterval(monthDate);
     return isWithinInterval(date, interval);
   } catch (e) {

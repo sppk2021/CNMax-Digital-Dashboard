@@ -43,8 +43,9 @@ export function ExpenseList({ expenses }: ExpenseListProps) {
   const filteredExpenses = expenses.filter(expense => {
     const title = expense.title || '';
     const category = expense.category || '';
-    const matchesSearch = title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         category.toLowerCase().includes(searchTerm.toLowerCase());
+    const search = (searchTerm || '').toLowerCase();
+    const matchesSearch = title.toLowerCase().includes(search) ||
+                         category.toLowerCase().includes(search);
     const matchesCategory = selectedCategory === 'All' || category === selectedCategory;
     return matchesSearch && matchesCategory;
   });

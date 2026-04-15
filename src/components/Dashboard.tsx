@@ -98,11 +98,10 @@ export function Dashboard({ setActiveTab }: DashboardProps) {
     
     // For dashboard, we fetch a 12-month window for the growth trend
     const startOfTrend = startOfMonth(subMonths(currentMonth, 11));
-    const startISO = startOfTrend.toISOString();
 
     // Queries
-    const salesQ = query(collection(db, 'sales'), where('date', '>=', startISO));
-    const expensesQ = query(collection(db, 'expenses'), where('date', '>=', startISO));
+    const salesQ = query(collection(db, 'sales'), where('date', '>=', startOfTrend.toISOString()));
+    const expensesQ = query(collection(db, 'expenses'), where('date', '>=', startOfTrend.toISOString()));
     const usersQ = query(collection(db, 'users'));
 
     let salesLoaded = false;

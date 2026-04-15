@@ -64,27 +64,18 @@ export function Analytics({ }: AnalyticsProps) {
     // Queries for the 6-month window
     const salesQ = query(
       collection(db, 'sales'), 
-      where('date', '>=', startISO), 
-      where('date', '<=', endISO)
+      where('date', '>=', startOfWindow.toISOString()), 
+      where('date', '<=', endOfWindow.toISOString())
     );
     
     const expensesQ = query(
       collection(db, 'expenses'), 
-      where('date', '>=', startISO), 
-      where('date', '<=', endISO)
+      where('date', '>=', startOfWindow.toISOString()), 
+      where('date', '<=', endOfWindow.toISOString())
     );
     
-    const newUsersQ = query(
-      collection(db, 'users'), 
-      where('createdAt', '>=', startISO), 
-      where('createdAt', '<=', endISO)
-    );
-
-    // For active users count, we need users who were active during the selected month.
-    const activeUsersQ = query(
-      collection(db, 'users'), 
-      where('expiryDate', '>=', startOfMonth(selectedMonth).toISOString())
-    );
+    const newUsersQ = query(collection(db, 'users'));
+    const activeUsersQ = query(collection(db, 'users'));
 
     let salesLoaded = false;
     let expensesLoaded = false;
