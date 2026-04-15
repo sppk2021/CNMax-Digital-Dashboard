@@ -309,14 +309,14 @@ export function Analytics({ users, sales, expenses }: AnalyticsProps) {
             <Download className="w-4 h-4" />
             Download Report
           </button>
-          <div className="flex items-center gap-2 bg-brand-card p-1.5 rounded-xl border border-brand-border shadow-sm">
+          <div className="flex items-center gap-2 bg-brand-card p-1.5 rounded-xl border border-brand-border shadow-clay">
             <button 
               onClick={() => setSelectedMonth(subMonths(selectedMonth, 1))}
               className="p-1.5 hover:bg-brand-primary/10 rounded-lg transition-colors text-brand-text-muted hover:text-brand-primary"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <div className="flex items-center gap-2 px-3 text-xs font-bold text-brand-text uppercase tracking-widest">
+            <div className="flex items-center gap-2 px-3 text-[10px] font-bold text-brand-text uppercase tracking-widest">
               <Calendar className="w-4 h-4 text-brand-primary" />
               {format(selectedMonth, 'MMMM yyyy')}
             </div>
@@ -389,9 +389,9 @@ export function Analytics({ users, sales, expenses }: AnalyticsProps) {
       {/* Revenue Trend & Forecast */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
         {/* Revenue Trend */}
-        <div className="lg:col-span-2 clay-card p-6 md:p-8 border-none shadow-clay">
+        <div className="lg:col-span-2 clay-card p-6 md:p-8 border-none shadow-clay bg-brand-card">
           <div className="flex items-center justify-between mb-8">
-            <h3 className="text-lg font-bold text-brand-text">Revenue Trend (Last 6 Months)</h3>
+            <h3 className="text-lg font-bold text-brand-text tracking-tight">Revenue Trend (Last 6 Months)</h3>
             <div className="flex items-center gap-2 text-[10px] text-emerald-600 font-bold bg-emerald-500/10 px-3 py-1 rounded-full uppercase tracking-widest">
               <TrendingUp className="w-3 h-3" />
               Forecast: +12% Next Month
@@ -419,8 +419,8 @@ export function Analytics({ users, sales, expenses }: AnalyticsProps) {
         </div>
 
         {/* Sales Breakdown */}
-        <div className="clay-card p-6 md:p-8 border-none shadow-clay">
-          <h3 className="text-lg font-bold text-brand-text mb-8">Sales Breakdown</h3>
+        <div className="clay-card p-6 md:p-8 border-none shadow-clay bg-brand-card">
+          <h3 className="text-lg font-bold text-brand-text tracking-tight mb-8">Sales Breakdown</h3>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -447,9 +447,9 @@ export function Analytics({ users, sales, expenses }: AnalyticsProps) {
         </div>
 
         {/* Profit vs Expenses */}
-        <div className="lg:col-span-3 clay-card p-6 md:p-8 border-none shadow-clay">
+        <div className="lg:col-span-3 clay-card p-6 md:p-8 border-none shadow-clay bg-brand-card">
           <div className="flex items-center justify-between mb-8">
-            <h3 className="text-lg font-bold text-brand-text">Profit vs Expenses (Last 6 Months)</h3>
+            <h3 className="text-lg font-bold text-brand-text tracking-tight">Profit vs Expenses (Last 6 Months)</h3>
             <div className="flex items-center gap-2 text-[10px] text-brand-text-muted font-bold uppercase tracking-widest">
               Financial Overview
             </div>
@@ -487,9 +487,9 @@ export function Analytics({ users, sales, expenses }: AnalyticsProps) {
       {/* Expired Users Trend & Plan Distribution */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
         {/* Expired Users Trend */}
-        <div className="lg:col-span-2 clay-card p-6 md:p-8 border-none shadow-clay">
+        <div className="lg:col-span-2 clay-card p-6 md:p-8 border-none shadow-clay bg-brand-card">
           <div className="flex items-center justify-between mb-8">
-            <h3 className="text-lg font-bold text-brand-text">Expired Users Trend</h3>
+            <h3 className="text-lg font-bold text-brand-text tracking-tight">Expired Users Trend</h3>
             <div className="flex items-center gap-2 text-[10px] text-brand-text-muted font-bold uppercase tracking-widest">
               Last 6 Months
             </div>
@@ -521,8 +521,8 @@ export function Analytics({ users, sales, expenses }: AnalyticsProps) {
         </div>
 
         {/* Plan Distribution */}
-        <div className="clay-card p-6 md:p-8 border-none shadow-clay">
-          <h3 className="text-lg font-bold text-brand-text mb-8">Plan Distribution (Active)</h3>
+        <div className="clay-card p-6 md:p-8 border-none shadow-clay bg-brand-card">
+          <h3 className="text-lg font-bold text-brand-text tracking-tight mb-8">Plan Distribution (Active)</h3>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -551,8 +551,8 @@ export function Analytics({ users, sales, expenses }: AnalyticsProps) {
 
       {/* Monthly Lists */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
-        <div className="clay-card p-6 md:p-8 border-none shadow-medium">
-          <h3 className="text-lg font-bold text-brand-text mb-6 flex items-center gap-3">
+        <div className="clay-card p-6 md:p-8 border-none shadow-clay bg-brand-card">
+          <h3 className="text-lg font-bold text-brand-text tracking-tight mb-6 flex items-center gap-3">
             <div className="p-2 bg-blue-500/10 rounded-lg">
               <UserPlus className="w-5 h-5 text-blue-500" />
             </div>
@@ -560,7 +560,7 @@ export function Analytics({ users, sales, expenses }: AnalyticsProps) {
           </h3>
           <div className="space-y-3 max-h-[400px] overflow-auto pr-2 custom-scrollbar">
             {currentMonthData.newUsers.map(u => (
-              <div key={u.id} className="flex items-center justify-between p-4 bg-brand-bg rounded-2xl border border-brand-border group hover:border-blue-500/30 transition-all">
+              <div key={u.id} className="flex items-center justify-between p-4 bg-brand-bg rounded-2xl border border-brand-border group hover:border-blue-500/30 transition-all shadow-sm">
                 <div>
                   <p className="text-sm font-bold text-brand-text">{u.name}</p>
                   <p className="text-[10px] font-bold text-brand-text-muted uppercase tracking-widest mt-0.5">
@@ -577,8 +577,8 @@ export function Analytics({ users, sales, expenses }: AnalyticsProps) {
           </div>
         </div>
 
-        <div className="clay-card p-6 md:p-8 border-none shadow-medium">
-          <h3 className="text-lg font-bold text-brand-text mb-6 flex items-center gap-3">
+        <div className="clay-card p-6 md:p-8 border-none shadow-clay bg-brand-card">
+          <h3 className="text-lg font-bold text-brand-text tracking-tight mb-6 flex items-center gap-3">
             <div className="p-2 bg-orange-500/10 rounded-lg">
               <RefreshCw className="w-5 h-5 text-orange-500" />
             </div>
@@ -586,7 +586,7 @@ export function Analytics({ users, sales, expenses }: AnalyticsProps) {
           </h3>
           <div className="space-y-3 max-h-[400px] overflow-auto pr-2 custom-scrollbar">
             {currentMonthData.renewals.map(s => (
-              <div key={s.id} className="flex items-center justify-between p-4 bg-brand-bg rounded-2xl border border-brand-border group hover:border-orange-500/30 transition-all">
+              <div key={s.id} className="flex items-center justify-between p-4 bg-brand-bg rounded-2xl border border-brand-border group hover:border-orange-500/30 transition-all shadow-sm">
                 <div>
                   <p className="text-sm font-bold text-brand-text">{s.userName}</p>
                   <p className="text-[10px] font-bold text-brand-text-muted uppercase tracking-widest mt-0.5">
@@ -603,8 +603,8 @@ export function Analytics({ users, sales, expenses }: AnalyticsProps) {
           </div>
         </div>
 
-        <div className="clay-card p-6 md:p-8 border-none shadow-medium">
-          <h3 className="text-lg font-bold text-brand-text mb-6 flex items-center gap-3">
+        <div className="clay-card p-6 md:p-8 border-none shadow-clay bg-brand-card">
+          <h3 className="text-lg font-bold text-brand-text tracking-tight mb-6 flex items-center gap-3">
             <div className="p-2 bg-red-500/10 rounded-lg">
               <UserMinus className="w-5 h-5 text-red-500" />
             </div>
@@ -612,7 +612,7 @@ export function Analytics({ users, sales, expenses }: AnalyticsProps) {
           </h3>
           <div className="space-y-3 max-h-[400px] overflow-auto pr-2 custom-scrollbar">
             {currentMonthData.expiredThisMonth.map(s => (
-              <div key={s.id} className="flex items-center justify-between p-4 bg-brand-bg rounded-2xl border border-brand-border group hover:border-red-500/30 transition-all">
+              <div key={s.id} className="flex items-center justify-between p-4 bg-brand-bg rounded-2xl border border-brand-border group hover:border-red-500/30 transition-all shadow-sm">
                 <div>
                   <p className="text-sm font-bold text-brand-text">{s.userName}</p>
                   <p className="text-[10px] font-bold text-brand-text-muted uppercase tracking-widest mt-0.5">
@@ -648,9 +648,9 @@ function MetricCard({ label, value, prevValue, icon: Icon, color, isCurrency, sh
   const displayValue = showSign && typeof value === 'number' ? `${value > 0 ? '+' : ''}${value}` : value;
 
   return (
-    <div className="clay-card p-5 border-none shadow-medium group">
+    <div className="clay-card p-5 border-none shadow-clay bg-brand-card group">
       <div className="flex items-center justify-between mb-4">
-        <div className={cn("p-2.5 rounded-xl", colorClasses[color])}>
+        <div className={cn("p-2.5 rounded-xl shadow-inner", colorClasses[color])}>
           <Icon className="w-4.5 h-4.5" />
         </div>
         {typeof value === 'number' && typeof prevValue === 'number' && (
@@ -664,7 +664,7 @@ function MetricCard({ label, value, prevValue, icon: Icon, color, isCurrency, sh
         )}
       </div>
       <p className="text-[10px] text-brand-text-muted font-bold uppercase tracking-widest mb-1">{label}</p>
-      <h4 className="text-xl font-bold text-brand-text">{displayValue}</h4>
+      <h4 className="text-xl font-bold text-brand-text tracking-tight">{displayValue}</h4>
     </div>
   );
 }

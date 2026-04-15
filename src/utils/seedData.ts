@@ -1,17 +1,31 @@
-import { collection, addDoc, serverTimestamp, updateDoc, doc, getDocs, deleteDoc } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, doc, getDocs, deleteDoc, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase';
-import { subMonths, addDays } from 'date-fns';
+import { addDays, format, startOfMonth, addMonths, subDays } from 'date-fns';
 
 export const clearAllData = async () => {
   console.log("clearAllData started");
   try {
-    const collectionsToClear = ['users', 'servers', 'sales', 'expenses', 'plans'];
+    const collectionsToClear = ['users', 'servers', 'sales', 'expenses', 'plans', 'admins'];
     
     for (const collectionName of collectionsToClear) {
+      if (collectionName === 'admins') continue; // Keep admins so we don't lock ourselves out
+      
       console.log(`Clearing ${collectionName}...`);
       const querySnapshot = await getDocs(collection(db, collectionName));
-      const deletePromises = querySnapshot.docs.map(docSnapshot => deleteDoc(doc(db, collectionName, docSnapshot.id)));
-      await Promise.all(deletePromises);
+      
+      // Use batches for efficiency
+      const chunks = [];
+      for (let i = 0; i < querySnapshot.docs.length; i += 500) {
+        chunks.push(querySnapshot.docs.slice(i, i + 500));
+      }
+
+      for (const chunk of chunks) {
+        const batch = writeBatch(db);
+        chunk.forEach(docSnapshot => {
+          batch.delete(doc(db, collectionName, docSnapshot.id));
+        });
+        await batch.commit();
+      }
       console.log(`${collectionName} cleared.`);
     }
     
@@ -22,53 +36,79 @@ export const clearAllData = async () => {
   }
 };
 
+const NAMES = [
+  'Aung Aung', 'Kyaw Kyaw', 'Mya Mya', 'Hla Hla', 'Zaw Zaw', 
+  'Thida', 'Phyu Phyu', 'Wai Yan', 'Min Min', 'Su Su',
+  'Tun Tun', 'Aye Aye', 'Nilar', 'Zarni', 'Thet Thet',
+  'Ko Ko', 'Ma Ma', 'Bo Bo', 'Lin Lin', 'Nan Nan',
+  'Facebook User', 'Messenger Client', 'Viber User', 'Telegram User',
+  'Premium Client', 'VIP User', 'Business Partner', 'Regular User'
+];
+
+const getRandomName = (index: number) => {
+  const baseName = NAMES[index % NAMES.length];
+  const suffix = Math.floor(index / NAMES.length);
+  return suffix > 0 ? `${baseName} ${suffix + 1}` : baseName;
+};
+
 export const seedSampleData = async () => {
   console.log("seedSampleData started");
   try {
     // 1. Plans
     console.log("Seeding plans...");
-    const plans = [
+    const planData = [
       { name: '1 Month', price: 5000, durationDays: 30, createdAt: new Date().toISOString() },
       { name: '3 Months', price: 14000, durationDays: 90, createdAt: new Date().toISOString() }
     ];
-    for (const plan of plans) {
-      await addDoc(collection(db, 'plans'), plan);
+    const planRefs: Record<string, string> = {};
+    for (const plan of planData) {
+      const docRef = await addDoc(collection(db, 'plans'), plan);
+      planRefs[plan.name] = docRef.id;
     }
     console.log("Plans seeded.");
 
     // 2. Servers
     console.log("Seeding servers...");
     const servers = [
-      { name: 'Server A', location: 'Singapore', status: 'Online', provider: 'AWS', createdAt: new Date().toISOString(), url: 'https://server-a.com' },
-      { name: 'Server B', location: 'US-East', status: 'Online', provider: 'GCP', createdAt: new Date().toISOString(), url: 'https://server-b.com' }
+      { name: 'Premium SG-1', location: 'Singapore', status: 'Online', provider: 'DigitalOcean', createdAt: new Date().toISOString(), url: 'sg1.cnmax.net' },
+      { name: 'Premium SG-2', location: 'Singapore', status: 'Online', provider: 'Linode', createdAt: new Date().toISOString(), url: 'sg2.cnmax.net' },
+      { name: 'US-West VIP', location: 'USA', status: 'Online', provider: 'AWS', createdAt: new Date().toISOString(), url: 'us1.cnmax.net' }
     ];
     for (const server of servers) {
       await addDoc(collection(db, 'servers'), server);
     }
     console.log("Servers seeded.");
 
-    // 3. Users & Sales
+    // 3. Users & Sales Flow
     const now = new Date();
     const currentYear = now.getFullYear();
     const currentMonthIndex = now.getMonth();
 
     let activeUsers: any[] = [];
-    let userCounter = 1;
+    let userCounter = 0;
 
     // Generate data from January up to the current month
     for (let m = 0; m <= currentMonthIndex; m++) {
-      const monthDate = new Date(currentYear, m, 15); // Middle of the month
+      const monthDate = new Date(currentYear, m, 1); // Start of the month
+      const saleDate = new Date(currentYear, m, 5); // Sale happened on the 5th
       
       if (m === 0) {
-        // January: 50 new users, 1-month plan
+        // JANUARY: 50 new users
+        // 40 users with 1-month plan
+        // 10 users with 3-month plan
         for (let i = 0; i < 50; i++) {
+          const isThreeMonth = i >= 40;
+          const planName = isThreeMonth ? '3 Months' : '1 Month';
+          const planPrice = isThreeMonth ? 14000 : 5000;
+          const durationDays = isThreeMonth ? 90 : 30;
+          
           const user = {
-            name: `User ${userCounter++}`,
+            name: getRandomName(userCounter++),
             createdAt: monthDate.toISOString(),
-            expiryDate: addDays(monthDate, 30).toISOString(),
+            expiryDate: addDays(monthDate, durationDays).toISOString(),
             subscriptionStartDate: monthDate.toISOString(),
             status: 'Active',
-            planName: '1 Month'
+            planName: planName
           };
           const docRef = await addDoc(collection(db, 'users'), user);
           activeUsers.push({ id: docRef.id, ...user });
@@ -76,80 +116,60 @@ export const seedSampleData = async () => {
           await addDoc(collection(db, 'sales'), {
             userId: docRef.id,
             userName: user.name,
-            amount: 5000,
-            date: monthDate.toISOString(),
+            amount: planPrice, // Full amount recorded in the month of purchase
+            date: saleDate.toISOString(),
             type: 'New',
-            planName: '1 Month'
-          });
-        }
-        
-        // Add a couple of 3-month plan users to demonstrate the multi-month logic
-        for (let i = 0; i < 5; i++) {
-          const user = {
-            name: `Pro User ${i + 1}`,
-            createdAt: monthDate.toISOString(),
-            expiryDate: addDays(monthDate, 90).toISOString(),
-            subscriptionStartDate: monthDate.toISOString(),
-            status: 'Active',
-            planName: '3 Months'
-          };
-          const docRef = await addDoc(collection(db, 'users'), user);
-          activeUsers.push({ id: docRef.id, ...user });
-          
-          await addDoc(collection(db, 'sales'), {
-            userId: docRef.id,
-            userName: user.name,
-            amount: 14000,
-            date: monthDate.toISOString(), // Full amount recorded in January
-            type: 'New',
-            planName: '3 Months'
+            planName: planName
           });
         }
       } else {
-        // Subsequent months
-        // 10 users expire
+        // SUBSEQUENT MONTHS (Feb onwards)
+        
+        // 1. Handle Expirations (10 users expire every month)
+        // We take 10 users who are due to expire and mark them as expired
         const expiredThisMonth = activeUsers.splice(0, 10);
         for (const user of expiredThisMonth) {
-          await updateDoc(doc(db, 'users', user.id), { status: 'Expired' });
-          await addDoc(collection(db, 'sales'), {
-            userId: user.id,
-            userName: user.name,
-            amount: 0,
-            date: monthDate.toISOString(),
-            type: 'Expired'
+          await updateDoc(doc(db, 'users', user.id), { 
+            status: 'Expired',
+            expiryDate: monthDate.toISOString() 
           });
         }
 
-        // Remaining users renew (only if their expiry date is within or before this month)
+        // 2. Handle Renewals (Remaining users who are expiring this month or already expired renew)
         for (const user of activeUsers) {
-          const expiryDate = new Date(user.expiryDate);
-          if (expiryDate <= addDays(monthDate, 15)) { // If expiring around this month
-            const planDuration = user.planName === '3 Months' ? 90 : 30;
-            const planPrice = user.planName === '3 Months' ? 14000 : 5000;
-            const newExpiry = addDays(monthDate, planDuration).toISOString();
+          const currentExpiry = new Date(user.expiryDate);
+          const endOfMonth = new Date(currentYear, m + 1, 0);
+          
+          // If their expiry is before the end of this month, they renew
+          if (currentExpiry <= endOfMonth) {
+            const isThreeMonth = user.planName === '3 Months';
+            const planDuration = isThreeMonth ? 90 : 30;
+            const planPrice = isThreeMonth ? 14000 : 5000;
+            
+            const newExpiry = addDays(currentExpiry, planDuration).toISOString();
             
             await updateDoc(doc(db, 'users', user.id), {
               expiryDate: newExpiry,
               lastRenewedAt: monthDate.toISOString(),
               status: 'Active'
             });
-            user.expiryDate = newExpiry; // update local state
+            user.expiryDate = newExpiry; // update local state for next month's loop
 
             await addDoc(collection(db, 'sales'), {
               userId: user.id,
               userName: user.name,
               amount: planPrice,
-              date: monthDate.toISOString(),
+              date: saleDate.toISOString(),
               type: 'Renewal',
               planName: user.planName
             });
           }
         }
 
-        // 10 new users join
+        // 3. Handle New Users (10 new users join every month)
         for (let i = 0; i < 10; i++) {
           const user = {
-            name: `User ${userCounter++}`,
+            name: getRandomName(userCounter++),
             createdAt: monthDate.toISOString(),
             expiryDate: addDays(monthDate, 30).toISOString(),
             subscriptionStartDate: monthDate.toISOString(),
@@ -163,12 +183,25 @@ export const seedSampleData = async () => {
             userId: docRef.id,
             userName: user.name,
             amount: 5000,
-            date: monthDate.toISOString(),
+            date: saleDate.toISOString(),
             type: 'New',
             planName: '1 Month'
           });
         }
       }
+    }
+
+    // 4. Expenses (Add some sample expenses)
+    console.log("Seeding expenses...");
+    const expenseCategories = ['Server Cost', 'Marketing', 'API Fees', 'Maintenance'];
+    for (let m = 0; m <= currentMonthIndex; m++) {
+      const monthDate = new Date(currentYear, m, 20);
+      await addDoc(collection(db, 'expenses'), {
+        category: expenseCategories[m % expenseCategories.length],
+        amount: 25000 + (Math.random() * 10000),
+        date: monthDate.toISOString(),
+        description: `Monthly ${expenseCategories[m % expenseCategories.length]}`
+      });
     }
 
     console.log("Sample data seeded successfully.");

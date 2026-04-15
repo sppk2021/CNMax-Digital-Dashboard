@@ -25,7 +25,6 @@ import {
   ResponsiveContainer 
 } from 'recharts';
 import { cn, getStatus, isInMonth, getNow } from '../utils';
-import { seedSampleData, clearAllData } from '../utils/seedData';
 import { startOfMonth, subMonths, addDays, isBefore, parseISO, format } from 'date-fns';
 
 interface DashboardProps {

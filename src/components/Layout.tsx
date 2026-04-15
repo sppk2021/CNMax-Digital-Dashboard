@@ -49,21 +49,7 @@ export function Layout({
   const [isMinimized, setIsMinimized] = React.useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const notificationRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [logoUrl, setLogoUrl] = useState(() => localStorage.getItem('app_logo') || "https://uploads.onecompiler.io/442aqr2uj/44gkkjfhk/CNMAXDIGITAL2.0.jpg");
-
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const result = reader.result as string;
-        setLogoUrl(result);
-        localStorage.setItem('app_logo', result);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+  const logoUrl = "https://uploads.onecompiler.io/442aqr2uj/44gkkjfhk/CNMAXDIGITAL2.0.jpg";
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -173,25 +159,12 @@ export function Layout({
           </button>
 
           <div className={cn("flex items-center gap-3 mb-10 px-2 transition-all", isMinimized && "justify-center")}>
-            <div 
-              className="w-10 h-10 rounded-xl bg-brand-primary flex items-center justify-center min-w-[40px] shadow-lg shadow-brand-primary/20 cursor-pointer relative group overflow-hidden"
-              onClick={() => fileInputRef.current?.click()}
-            >
+            <div className="w-10 h-10 rounded-xl bg-brand-primary flex items-center justify-center min-w-[40px] shadow-lg shadow-brand-primary/20 relative overflow-hidden">
               <img 
                 src={logoUrl} 
                 alt="Logo" 
                 className="w-full h-full object-cover"
                 referrerPolicy="no-referrer"
-              />
-              <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                <span className="text-[8px] text-white font-bold uppercase">Edit</span>
-              </div>
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                onChange={handleLogoUpload} 
-                accept="image/*" 
-                className="hidden" 
               />
             </div>
             {!isMinimized && (

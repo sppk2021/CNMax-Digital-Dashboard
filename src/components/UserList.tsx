@@ -293,36 +293,43 @@ export function UserList({ users, plans, sales }: UserListProps) {
 
       {/* Bulk Action Confirmation Modal */}
       {bulkActionState.type && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => !bulkActionState.loading && setBulkActionState({ type: null, loading: false })} />
-          <div className="relative w-full max-w-md bg-white rounded-3xl p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
-            <h3 className="text-xl font-bold mb-2">
-              {bulkActionState.type === 'delete' ? 'Confirm Bulk Delete' : 'Confirm Bulk Renewal'}
-            </h3>
-            <p className="text-brand-text-muted mb-6">
-              {bulkActionState.type === 'delete' 
-                ? `Are you sure you want to permanently delete ${selectedUserIds.size} users?`
-                : `Are you sure you want to renew ${selectedUserIds.size} users for 1 month?`}
-            </p>
-            <div className="flex justify-end gap-3">
-              <button 
-                disabled={bulkActionState.loading}
-                onClick={() => setBulkActionState({ type: null, loading: false })}
-                className="px-4 py-2 text-sm font-bold text-brand-text-muted hover:bg-slate-100 rounded-xl"
-              >
-                Cancel
-              </button>
-              <button 
-                disabled={bulkActionState.loading}
-                onClick={bulkActionState.type === 'delete' ? executeBulkDelete : executeBulkRenew}
-                className={cn(
-                  "px-4 py-2 text-sm font-bold text-white rounded-xl flex items-center gap-2",
-                  bulkActionState.type === 'delete' ? "bg-red-500 hover:bg-red-600" : "bg-brand-primary hover:bg-brand-primary-hover"
-                )}
-              >
-                {bulkActionState.loading && <Loader2 className="w-4 h-4 animate-spin" />}
-                Confirm
-              </button>
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="relative w-full max-w-md clay-card p-8 border-none shadow-clay bg-brand-card animate-in zoom-in-95 duration-200">
+            <div className="flex flex-col items-center text-center space-y-4">
+              <div className={cn(
+                "w-16 h-16 rounded-2xl flex items-center justify-center mb-2",
+                bulkActionState.type === 'delete' ? "bg-red-500/10" : "bg-brand-primary/10"
+              )}>
+                {bulkActionState.type === 'delete' ? <UserMinus className="w-8 h-8 text-red-500" /> : <RefreshCw className="w-8 h-8 text-brand-primary" />}
+              </div>
+              <h3 className="text-xl font-bold text-brand-text">
+                {bulkActionState.type === 'delete' ? 'Confirm Bulk Delete' : 'Confirm Bulk Renewal'}
+              </h3>
+              <p className="text-brand-text-muted text-sm leading-relaxed">
+                {bulkActionState.type === 'delete' 
+                  ? `Are you sure you want to permanently delete ${selectedUserIds.size} users? This action cannot be undone.`
+                  : `Are you sure you want to renew ${selectedUserIds.size} users for 1 month? This will generate sales records for each user.`}
+              </p>
+              <div className="flex gap-4 w-full mt-6">
+                <button 
+                  disabled={bulkActionState.loading}
+                  onClick={() => setBulkActionState({ type: null, loading: false })}
+                  className="clay-btn flex-1 py-3 text-xs font-bold"
+                >
+                  Cancel
+                </button>
+                <button 
+                  disabled={bulkActionState.loading}
+                  onClick={bulkActionState.type === 'delete' ? executeBulkDelete : executeBulkRenew}
+                  className={cn(
+                    "flex-1 flex items-center justify-center gap-2 px-6 py-3 text-white text-xs font-bold rounded-xl shadow-lg transition-all border-none",
+                    bulkActionState.type === 'delete' ? "bg-red-500 hover:bg-red-600 shadow-red-500/20" : "bg-brand-primary hover:bg-brand-primary-hover shadow-brand-primary/20"
+                  )}
+                >
+                  {bulkActionState.loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Confirm
+                </button>
+              </div>
             </div>
           </div>
         </div>

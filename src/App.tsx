@@ -222,8 +222,13 @@ export default function App() {
       <div className="min-h-screen bg-brand-bg flex items-center justify-center p-4">
         <div className="clay-card w-full max-w-md p-10 border-none shadow-clay bg-brand-card">
           <div className="flex flex-col items-center mb-10">
-            <div className="w-20 h-20 bg-brand-primary/10 rounded-[2rem] flex items-center justify-center mb-6 shadow-inner">
-              <Lock className="w-10 h-10 text-brand-primary" />
+            <div className="w-24 h-24 bg-white rounded-[2rem] flex items-center justify-center mb-6 shadow-clay overflow-hidden p-2">
+              <img 
+                src="https://uploads.onecompiler.io/442aqr2uj/44gkkjfhk/CNMAXDIGITAL2.0.jpg" 
+                alt="CN MAX DIGITAL" 
+                className="w-full h-full object-contain rounded-2xl"
+                referrerPolicy="no-referrer"
+              />
             </div>
             <h1 className="text-3xl font-black text-brand-text tracking-tight">
               {isSignUp ? 'Create Account' : 'Welcome Back'}
@@ -329,7 +334,16 @@ export default function App() {
         {activeTab === 'servers' && <ServerManagement servers={servers} />}
         {activeTab === 'analytics' && <Analytics users={users} sales={sales} expenses={expenses} />}
         {activeTab === 'plans' && <PlanManagement plans={plans} />}
-        {activeTab === 'settings' && <Settings currentUser={user} />}
+        {activeTab === 'settings' && (
+          <Settings 
+            currentUser={user} 
+            users={users}
+            plans={plans}
+            servers={servers}
+            sales={sales}
+            expenses={expenses}
+          />
+        )}
       </Layout>
     </>
   );
