@@ -118,13 +118,19 @@ export function UserDetailsModal({ isOpen, onClose, user, sales, plans }: UserDe
                 <div className="mb-2 text-center md:text-left flex-1">
                   <h2 className="text-2xl md:text-3xl font-black text-brand-text tracking-tight leading-tight">{user.name}</h2>
                   <div className="flex flex-wrap justify-center md:justify-start gap-2 mt-2">
-                    <span className="text-brand-text-muted text-[10px] font-bold uppercase tracking-widest bg-brand-bg/80 px-2 py-1 rounded-md border border-brand-border">ID: {user.id.slice(0, 12)}...</span>
+                    <span className="text-brand-text-muted text-[10px] font-bold uppercase tracking-widest bg-brand-bg/80 px-2 py-1 rounded-md border border-brand-border">ID: {user.refId || user.id.slice(0, 5)}</span>
                     <span className={cn(
                       "text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-md",
-                      status === 'Active' ? "bg-emerald-500/10 text-emerald-600" : "bg-red-500/10 text-red-500"
+                      status === 'Active' ? "bg-emerald-500/10 text-emerald-600" : 
+                      status === 'Upcoming' ? "bg-blue-500/10 text-blue-600" : "bg-red-500/10 text-red-500"
                     )}>
                       {status}
                     </span>
+                    {user.platform && (
+                      <span className="text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-md bg-brand-primary/10 text-brand-primary">
+                        {user.platform}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>

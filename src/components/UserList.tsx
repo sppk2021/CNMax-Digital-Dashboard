@@ -21,6 +21,7 @@ import { addDays, format, parseISO, startOfMonth } from 'date-fns';
 import { UserModal } from './UserModal';
 import { RenewalModal } from './RenewalModal';
 import { UserDetailsModal } from './UserDetailsModal';
+import { EditUserModal } from './EditUserModal';
 
 interface UserListProps {
   users: any[];
@@ -34,9 +35,11 @@ export function UserList({ users, plans, sales }: UserListProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isRenewalModalOpen, setIsRenewalModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
   const [bulkActionState, setBulkActionState] = useState<{type: 'renew' | 'delete' | null, loading: boolean}>({ type: null, loading: false });
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
   const now = getNow();
   const currentMonthStart = startOfMonth(now);
@@ -229,6 +232,12 @@ export function UserList({ users, plans, sales }: UserListProps) {
         sales={sales}
         plans={plans}
       />
+      <EditUserModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        user={selectedUser}
+        plans={plans}
+      />
 
       {/* Filters */}
       <div className="flex flex-col lg:flex-row lg:items-center gap-4">
@@ -395,12 +404,21 @@ export function UserList({ users, plans, sales }: UserListProps) {
                             status === 'Expired' ? "text-red-500" : "text-brand-text"
                           )}>{user.name}</p>
                           <div className="flex items-center gap-1.5 mt-0.5">
-                            {(user.name || '').toLowerCase().includes('fb') || (user.name || '').toLowerCase().includes('facebook') ? (
+                            {user.platform === 'Facebook' ? (
                               <Facebook className="w-3 h-3 text-blue-500" />
-                            ) : (
+                            ) : user.platform === 'Viber' ? (
                               <MessageCircle className="w-3 h-3 text-emerald-500" />
+                            ) : (
+                              <Users className="w-3 h-3 text-brand-text-muted" />
                             )}
-                            <span className="text-[10px] font-bold text-brand-text-muted uppercase tracking-wider">ID: {user.id.slice(0, 8)}</span>
+                            <span className="text-[10px] font-bold text-brand-text-muted uppercase tracking-wider">
+                              ID: {user.refId || user.id.slice(0, 5)}
+                            </span>
+                            {user.platform && (
+                              <span className="text-[9px] font-bold text-brand-text-muted/50 uppercase tracking-tighter">
+                                • {user.platform}
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -468,12 +486,47 @@ export function UserList({ users, plans, sales }: UserListProps) {
                           <RefreshCw className="w-3 h-3" />
                           Renew
                         </button>
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); }}
-                          className="p-2 text-brand-text-muted hover:text-brand-primary transition-all rounded-lg hover:bg-brand-bg"
-                        >
-                          <MoreVertical className="w-4 h-4" />
-                        </button>
+                        <div className="relative">
+                          <button 
+                            onClick={(e) => { 
+                              e.stopPropagation(); 
+                              setActiveMenuId(activeMenuId === user.id ? null : user.id);
+                            }}
+                            className="p-2 text-brand-text-muted hover:text-brand-primary transition-all rounded-lg hover:bg-brand-bg"
+                          >
+                            <MoreVertical className="w-4 h-4" />
+                          </button>
+                          
+                          {activeMenuId === user.id && (
+                            <div className="absolute right-0 mt-2 w-48 bg-brand-card border border-brand-border rounded-xl shadow-clay z-50 py-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedUser(user);
+                                  setIsEditModalOpen(true);
+                                  setActiveMenuId(null);
+                                }}
+                                className="w-full text-left px-4 py-2 text-xs font-bold text-brand-text hover:bg-brand-bg transition-colors flex items-center gap-2"
+                              >
+                                <Calendar className="w-4 h-4 text-brand-primary" />
+                                Edit User Details
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (window.confirm('Are you sure you want to delete this user?')) {
+                                    deleteDoc(doc(db, 'users', user.id));
+                                  }
+                                  setActiveMenuId(null);
+                                }}
+                                className="w-full text-left px-4 py-2 text-xs font-bold text-red-500 hover:bg-red-50 transition-colors flex items-center gap-2"
+                              >
+                                <UserMinus className="w-4 h-4" />
+                                Delete User
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </td>
                   </tr>
@@ -518,12 +571,21 @@ export function UserList({ users, plans, sales }: UserListProps) {
                         status === 'Expired' ? "text-red-500" : "text-brand-text"
                       )}>{user.name}</p>
                       <div className="flex items-center gap-1.5 mt-0.5">
-                        {(user.name || '').toLowerCase().includes('fb') || (user.name || '').toLowerCase().includes('facebook') ? (
+                        {user.platform === 'Facebook' ? (
                           <Facebook className="w-3 h-3 text-blue-500" />
-                        ) : (
+                        ) : user.platform === 'Viber' ? (
                           <MessageCircle className="w-3 h-3 text-emerald-500" />
+                        ) : (
+                          <Users className="w-3 h-3 text-brand-text-muted" />
                         )}
-                        <span className="text-[10px] font-bold text-brand-text-muted uppercase tracking-wider">ID: {user.id.slice(0, 8)}</span>
+                        <span className="text-[10px] font-bold text-brand-text-muted uppercase tracking-wider">
+                          ID: {user.refId || user.id.slice(0, 5)}
+                        </span>
+                        {user.platform && (
+                          <span className="text-[9px] font-bold text-brand-text-muted/50 uppercase tracking-tighter">
+                            • {user.platform}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
