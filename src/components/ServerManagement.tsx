@@ -98,10 +98,13 @@ export function ServerManagement({ servers }: ServerManagementProps) {
   };
 
   const filteredServers = servers.filter(server => {
+    const name = server.name || '';
+    const location = server.location || '';
+    const url = server.url || '';
     const matchesSearch = 
-      server.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      server.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      server.url.toLowerCase().includes(searchTerm.toLowerCase());
+      name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      location.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      url.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'All' || server.status === statusFilter;
     const matchesProvider = providerFilter === 'All' || server.provider === providerFilter;
     const matchesLocation = locationFilter === 'All' || server.location === locationFilter;

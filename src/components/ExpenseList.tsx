@@ -41,9 +41,11 @@ export function ExpenseList({ expenses }: ExpenseListProps) {
   const categories = ['All', 'Marketing', 'Server', 'Salary', 'Office', 'Other'];
 
   const filteredExpenses = expenses.filter(expense => {
-    const matchesSearch = expense.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         expense.category.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'All' || expense.category === selectedCategory;
+    const title = expense.title || '';
+    const category = expense.category || '';
+    const matchesSearch = title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         category.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === 'All' || category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 

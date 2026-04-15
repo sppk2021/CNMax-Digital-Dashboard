@@ -1,4 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { db, handleFirestoreError, OperationType } from '../firebase';
 import { 
   Users, 
   UserPlus, 
@@ -28,19 +30,23 @@ import { cn, getStatus, isInMonth, getNow } from '../utils';
 import { startOfMonth, subMonths, addDays, isBefore, parseISO, format } from 'date-fns';
 
 interface DashboardProps {
-  users: any[];
-  sales: any[];
-  expenses: any[];
   setActiveTab: (tab: any) => void;
 }
 
-export function Dashboard({ users, sales, expenses, setActiveTab }: DashboardProps) {
+export function Dashboard({ setActiveTab }: DashboardProps) {
   const now = getNow();
-  const currentMonth = startOfMonth(now);
-  const threeDaysFromNow = addDays(now, 3);
+  const currentMonth = useMemo(() => startOfMonth(now), [format(now, 'yyyy-MM')]);
+  const currentMonthKey = format(currentMonth, 'yyyy-MM');
+  const threeDaysFromNow = useMemo(() => addDays(now, 3), [format(now, 'yyyy-MM-dd')]);
   const [sendingEmails, setSendingEmails] = useState<Record<string, boolean>>({});
   const [sentEmails, setSentEmails] = useState<Record<string, boolean>>({});
   const [isBulkSending, setIsBulkSending] = useState(false);
+
+  // Local state for optimized dashboard metrics
+  const [fetchedSales, setFetchedSales] = useState<any[]>([]);
+  const [fetchedExpenses, setFetchedExpenses] = useState<any[]>([]);
+  const [fetchedUsers, setFetchedUsers] = useState<any[]>([]);
+  const [loadingMetrics, setLoadingMetrics] = useState(true);
 
   const handleSendReminder = async (user: any) => {
     setSendingEmails(prev => ({ ...prev, [user.id]: true }));
@@ -87,70 +93,107 @@ export function Dashboard({ users, sales, expenses, setActiveTab }: DashboardPro
     }
   };
 
+  useEffect(() => {
+    setLoadingMetrics(true);
+    
+    // For dashboard, we fetch a 12-month window for the growth trend
+    const startOfTrend = startOfMonth(subMonths(currentMonth, 11));
+    const startISO = startOfTrend.toISOString();
+
+    // Queries
+    const salesQ = query(collection(db, 'sales'), where('date', '>=', startISO));
+    const expensesQ = query(collection(db, 'expenses'), where('date', '>=', startISO));
+    const usersQ = query(collection(db, 'users'));
+
+    let salesLoaded = false;
+    let expensesLoaded = false;
+    let usersLoaded = false;
+
+    const checkLoading = () => {
+      if (salesLoaded && expensesLoaded && usersLoaded) {
+        setLoadingMetrics(false);
+      }
+    };
+
+    const unsubSales = onSnapshot(salesQ, snapshot => {
+      setFetchedSales(snapshot.docs.map(d => ({id: d.id, ...d.data()})));
+      salesLoaded = true;
+      checkLoading();
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'sales'));
+    
+    const unsubExpenses = onSnapshot(expensesQ, snapshot => {
+      setFetchedExpenses(snapshot.docs.map(d => ({id: d.id, ...d.data()})));
+      expensesLoaded = true;
+      checkLoading();
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'expenses'));
+    
+    const unsubUsers = onSnapshot(usersQ, snapshot => {
+      setFetchedUsers(snapshot.docs.map(d => ({id: d.id, ...d.data()})));
+      usersLoaded = true;
+      checkLoading();
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'users'));
+
+    return () => {
+      unsubSales();
+      unsubExpenses();
+      unsubUsers();
+    };
+  }, [currentMonthKey]);
+
   // Metrics
-  const activeUsers = users.filter(u => getStatus(u.expiryDate, u.subscriptionStartDate) === 'Active');
-  const expiredUsers = users.filter(u => getStatus(u.expiryDate, u.subscriptionStartDate) === 'Expired');
-  const expiringSoon = users.filter(u => {
+  const activeUsers = useMemo(() => fetchedUsers.filter(u => getStatus(u.expiryDate, u.subscriptionStartDate) === 'Active'), [fetchedUsers]);
+  const expiredUsers = useMemo(() => fetchedUsers.filter(u => getStatus(u.expiryDate, u.subscriptionStartDate) === 'Expired'), [fetchedUsers]);
+  const expiringSoon = useMemo(() => fetchedUsers.filter(u => {
     if (!u.expiryDate) return false;
     try {
       const expiry = parseISO(u.expiryDate);
-      return getStatus(u.expiryDate, u.subscriptionStartDate) === 'Active' && isBefore(expiry, threeDaysFromNow);
+      // Only show if active, expiring within 3 days, AND expiring within the current month
+      return getStatus(u.expiryDate, u.subscriptionStartDate) === 'Active' && 
+             isBefore(expiry, threeDaysFromNow) &&
+             isInMonth(u.expiryDate, currentMonth);
     } catch (e) {
       return false;
     }
-  });
+  }), [fetchedUsers, threeDaysFromNow, currentMonth]);
   
-  const newUsersThisMonth = users.filter(u => isInMonth(u.createdAt, currentMonth));
-  const renewedSalesThisMonth = sales.filter(s => s.type === 'Renewal' && isInMonth(s.date, currentMonth));
-  const totalSalesThisMonth = sales.filter(s => isInMonth(s.date, currentMonth));
-  const revenueThisMonth = totalSalesThisMonth.reduce((acc, s) => acc + s.amount, 0);
-  const expensesThisMonth = expenses.filter(e => isInMonth(e.date, currentMonth)).reduce((acc, e) => acc + e.amount, 0);
+  const newUsersThisMonth = useMemo(() => fetchedUsers.filter(u => isInMonth(u.createdAt, currentMonth)), [fetchedUsers, currentMonth]);
+  const totalSalesThisMonth = useMemo(() => fetchedSales.filter(s => isInMonth(s.date, currentMonth)), [fetchedSales, currentMonth]);
+  const renewedSalesThisMonth = useMemo(() => totalSalesThisMonth.filter(s => s.type === 'Renewal'), [totalSalesThisMonth]);
+  const revenueThisMonth = useMemo(() => totalSalesThisMonth.reduce((acc, s) => acc + s.amount, 0), [totalSalesThisMonth]);
+  const expensesThisMonth = useMemo(() => fetchedExpenses.filter(e => isInMonth(e.date, currentMonth)).reduce((acc, e) => acc + e.amount, 0), [fetchedExpenses, currentMonth]);
   const netProfitThisMonth = revenueThisMonth - expensesThisMonth;
 
   // Monthly Comparison Metrics
-  const renewedUserIdsThisMonth = new Set(renewedSalesThisMonth.map(s => s.userId));
-  const expiredSalesThisMonth = sales.filter(s => s.type === 'Expired' && isInMonth(s.date, currentMonth));
-  const expiredEventsThisMonth = expiredSalesThisMonth.filter(s => !renewedUserIdsThisMonth.has(s.userId));
+  const expiredEventsThisMonth = useMemo(() => {
+    const renewedUserIdsThisMonth = new Set(renewedSalesThisMonth.map(s => s.userId));
+    const expiredSalesThisMonth = fetchedSales.filter(s => s.type === 'Expired' && isInMonth(s.date, currentMonth));
+    return expiredSalesThisMonth.filter(s => !renewedUserIdsThisMonth.has(s.userId));
+  }, [fetchedSales, renewedSalesThisMonth, currentMonth]);
   
-  const prevMonthTotalUsers = users.filter(u => {
-    if (!u.createdAt) return false;
-    try {
-      return isBefore(parseISO(u.createdAt), currentMonth);
-    } catch (e) {
-      return false;
-    }
-  }).length;
   const netChange = newUsersThisMonth.length - expiredEventsThisMonth.length;
 
   // Revenue Breakdown by Plan
   const revenueByPlan = useMemo(() => {
-    const currentSales = sales.filter(s => isInMonth(s.date, currentMonth));
     const breakdown: Record<string, number> = {};
-    currentSales.forEach(s => {
+    totalSalesThisMonth.forEach(s => {
       const plan = s.planName || 'Other';
       breakdown[plan] = (breakdown[plan] || 0) + s.amount;
     });
     return Object.entries(breakdown)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
-  }, [sales, currentMonth]);
-
-  // Advanced Metrics
-  const avgPlanPrice = sales.length > 0 ? sales.reduce((acc, s) => acc + s.amount, 0) / sales.length : 0;
-  const projectedRevenue = activeUsers.length * avgPlanPrice;
-  const churnBase = activeUsers.length + expiredEventsThisMonth.length;
-  const churnRate = churnBase > 0 ? (expiredEventsThisMonth.length / churnBase) * 100 : 0;
+  }, [totalSalesThisMonth]);
 
   // Growth Trend Data (Last 12 Months)
   const growthData = useMemo(() => {
     const last12Months = Array.from({ length: 12 }).map((_, i) => subMonths(currentMonth, 11 - i));
     return last12Months.map(month => {
-      const newInMonth = users.filter(u => isInMonth(u.createdAt, month)).length;
+      const newInMonth = fetchedUsers.filter(u => isInMonth(u.createdAt, month)).length;
       
-      const renewalsInMonth = sales.filter(s => s.type === 'Renewal' && isInMonth(s.date, month));
+      const renewalsInMonth = fetchedSales.filter(s => s.type === 'Renewal' && isInMonth(s.date, month));
       const renewedIds = new Set(renewalsInMonth.map(s => s.userId));
       
-      const expiredSalesInMonth = sales.filter(s => s.type === 'Expired' && isInMonth(s.date, month));
+      const expiredSalesInMonth = fetchedSales.filter(s => s.type === 'Expired' && isInMonth(s.date, month));
       const trulyExpiredInMonth = expiredSalesInMonth.filter(s => !renewedIds.has(s.userId)).length;
       
       return {
@@ -159,7 +202,8 @@ export function Dashboard({ users, sales, expenses, setActiveTab }: DashboardPro
         net: newInMonth - trulyExpiredInMonth,
       };
     });
-  }, [users, sales, currentMonth]);
+  }, [fetchedUsers, fetchedSales, currentMonth]);
+
 
   const stats = [
     { 
@@ -198,7 +242,14 @@ export function Dashboard({ users, sales, expenses, setActiveTab }: DashboardPro
 
   return (
     <div className="space-y-8 pb-12 animate-in fade-in duration-500">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+      {loadingMetrics ? (
+        <div className="flex flex-col items-center justify-center h-64 space-y-4">
+          <Loader2 className="w-8 h-8 text-brand-primary animate-spin" />
+          <p className="text-brand-text-muted text-sm font-medium">Loading dashboard metrics...</p>
+        </div>
+      ) : (
+        <>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h2 className="text-2xl font-bold text-brand-text mb-1 tracking-tight">Business Overview</h2>
           <p className="text-brand-text-muted text-sm font-medium">Real-time summary of your business performance.</p>
@@ -257,21 +308,19 @@ export function Dashboard({ users, sales, expenses, setActiveTab }: DashboardPro
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
           <div className="lg:col-span-8 grid grid-cols-2 sm:grid-cols-4 gap-6">
             <div className="space-y-1">
-              <p className="text-[10px] text-brand-text-muted font-bold uppercase tracking-widest">Growth</p>
+              <p className="text-[10px] text-brand-text-muted font-bold uppercase tracking-widest">New Users</p>
               <p className="text-xl font-bold text-emerald-500">+{newUsersThisMonth.length}</p>
-              <p className="text-[10px] text-brand-text-muted">New users</p>
+              <p className="text-[10px] text-brand-text-muted">Joined this month</p>
             </div>
             <div className="space-y-1">
-              <p className="text-[10px] text-brand-text-muted font-bold uppercase tracking-widest">Churn</p>
+              <p className="text-[10px] text-brand-text-muted font-bold uppercase tracking-widest">Expired</p>
               <p className="text-xl font-bold text-red-500">-{expiredEventsThisMonth.length}</p>
-              <p className="text-[10px] text-brand-text-muted">Expired</p>
+              <p className="text-[10px] text-brand-text-muted">Subscription ended</p>
             </div>
             <div className="space-y-1">
-              <p className="text-[10px] text-brand-text-muted font-bold uppercase tracking-widest">Net</p>
-              <p className={cn("text-xl font-bold", netChange >= 0 ? "text-emerald-500" : "text-red-500")}>
-                {netChange >= 0 ? '+' : ''}{netChange}
-              </p>
-              <p className="text-[10px] text-brand-text-muted">Total change</p>
+              <p className="text-[10px] text-brand-text-muted font-bold uppercase tracking-widest">Renewed</p>
+              <p className="text-xl font-bold text-orange-500">+{renewedSalesThisMonth.length}</p>
+              <p className="text-[10px] text-brand-text-muted">Renewed this month</p>
             </div>
             <div className="space-y-1">
               <p className="text-[10px] text-brand-text-muted font-bold uppercase tracking-widest">Active</p>
@@ -463,7 +512,7 @@ export function Dashboard({ users, sales, expenses, setActiveTab }: DashboardPro
               Recent Activity
             </h3>
             <div className="space-y-4">
-              {sales.slice(0, 4).map((sale) => (
+              {totalSalesThisMonth.slice(0, 4).map((sale) => (
                 <div key={sale.id} className="flex items-center justify-between group">
                   <div className="flex items-center gap-3">
                     <div className={cn(
@@ -489,13 +538,15 @@ export function Dashboard({ users, sales, expenses, setActiveTab }: DashboardPro
                   <p className="text-xs font-bold text-emerald-600">+{sale.amount.toLocaleString()}</p>
                 </div>
               ))}
-              {sales.length === 0 && (
+              {fetchedSales.length === 0 && (
                 <p className="text-center text-brand-text-muted py-8 text-[10px] font-bold uppercase tracking-widest">No activity</p>
               )}
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </>
+  )}
+</div>
   );
 }

@@ -42,7 +42,8 @@ export function UserList({ users, plans, sales }: UserListProps) {
   const currentMonthStart = startOfMonth(now);
 
   const filteredUsers = users.filter(user => {
-    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const name = user.name || '';
+    const matchesSearch = name.toLowerCase().includes(searchTerm.toLowerCase());
     const status = getStatus(user.expiryDate, user.subscriptionStartDate);
     
     let matchesStatus = true;
@@ -335,9 +336,10 @@ export function UserList({ users, plans, sales }: UserListProps) {
         </div>
       )}
 
-      {/* Table */}
+      {/* Table / Card View */}
       <div className="clay-card overflow-hidden border-none shadow-clay bg-brand-card">
-        <div className="overflow-x-auto">
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-brand-bg/50 border-b border-brand-border">
@@ -393,7 +395,7 @@ export function UserList({ users, plans, sales }: UserListProps) {
                             status === 'Expired' ? "text-red-500" : "text-brand-text"
                           )}>{user.name}</p>
                           <div className="flex items-center gap-1.5 mt-0.5">
-                            {user.name.toLowerCase().includes('fb') || user.name.toLowerCase().includes('facebook') ? (
+                            {(user.name || '').toLowerCase().includes('fb') || (user.name || '').toLowerCase().includes('facebook') ? (
                               <Facebook className="w-3 h-3 text-blue-500" />
                             ) : (
                               <MessageCircle className="w-3 h-3 text-emerald-500" />
@@ -479,6 +481,101 @@ export function UserList({ users, plans, sales }: UserListProps) {
               })}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Card View */}
+        <div className="md:hidden divide-y divide-brand-border">
+          {filteredUsers.map((user) => {
+            const status = getStatus(user.expiryDate, user.subscriptionStartDate);
+            const isSelected = selectedUserIds.has(user.id);
+            return (
+              <div 
+                key={user.id} 
+                onClick={() => openDetails(user)}
+                className={cn(
+                  "p-4 space-y-4 active:bg-brand-bg/50 transition-colors",
+                  isSelected && "bg-brand-primary/5"
+                )}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <input 
+                      type="checkbox" 
+                      checked={isSelected}
+                      onClick={(e) => toggleSelectUser(user.id, e)}
+                      onChange={() => {}}
+                      className="w-4 h-4 rounded border-brand-border text-brand-primary focus:ring-brand-primary/20"
+                    />
+                    <div className={cn(
+                      "w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm",
+                      status === 'Expired' ? "bg-red-500/10 text-red-500" : "bg-brand-primary/10 text-brand-primary"
+                    )}>
+                      {user.name.charAt(0)}
+                    </div>
+                    <div>
+                      <p className={cn(
+                        "text-sm font-bold",
+                        status === 'Expired' ? "text-red-500" : "text-brand-text"
+                      )}>{user.name}</p>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        {(user.name || '').toLowerCase().includes('fb') || (user.name || '').toLowerCase().includes('facebook') ? (
+                          <Facebook className="w-3 h-3 text-blue-500" />
+                        ) : (
+                          <MessageCircle className="w-3 h-3 text-emerald-500" />
+                        )}
+                        <span className="text-[10px] font-bold text-brand-text-muted uppercase tracking-wider">ID: {user.id.slice(0, 8)}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <span className={cn(
+                    "px-2 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider",
+                    status === 'Active' && "bg-emerald-500/10 text-emerald-600",
+                    status === 'Expired' && "bg-red-500 text-white shadow-lg shadow-red-500/40",
+                    status === 'Upcoming' && "bg-blue-500/10 text-blue-600"
+                  )}>
+                    {status}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 bg-brand-bg/30 p-3 rounded-xl border border-brand-border">
+                  <div>
+                    <p className="text-[9px] font-bold text-brand-text-muted uppercase tracking-widest mb-1">Plan</p>
+                    <p className="text-xs font-bold text-brand-text">{user.planName || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-bold text-brand-text-muted uppercase tracking-widest mb-1">Expiry</p>
+                    <p className={cn(
+                      "text-xs font-bold",
+                      status === 'Expired' ? "text-red-500" : "text-brand-text"
+                    )}>
+                      {user.expiryDate ? format(parseISO(user.expiryDate), 'MMM d, yyyy') : 'N/A'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2">
+                  <button 
+                    onClick={(e) => openRenewal(user, e)}
+                    className={cn(
+                      "flex items-center gap-2 px-4 py-2 rounded-lg text-[10px] font-bold transition-all",
+                      status === 'Expired'
+                        ? "bg-brand-primary text-white shadow-sm"
+                        : "bg-brand-bg border border-brand-border text-brand-text-muted"
+                    )}
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    Renew
+                  </button>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); }}
+                    className="p-2 text-brand-text-muted hover:text-brand-primary transition-all rounded-lg bg-brand-bg border border-brand-border"
+                  >
+                    <MoreVertical className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </div>
         {filteredUsers.length === 0 && (
           <div className="text-center py-20">

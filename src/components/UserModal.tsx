@@ -13,7 +13,6 @@ interface UserModalProps {
 
 export function UserModal({ isOpen, onClose, plans }: UserModalProps) {
   const [name, setName] = useState('');
-  const [password, setPassword] = useState('');
   const [selectedPlanId, setSelectedPlanId] = useState('');
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
@@ -22,7 +21,7 @@ export function UserModal({ isOpen, onClose, plans }: UserModalProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !selectedPlanId || !password.trim()) return;
+    if (!name.trim() || !selectedPlanId) return;
 
     const plan = plans.find(p => p.id === selectedPlanId);
     if (!plan) return;
@@ -34,9 +33,6 @@ export function UserModal({ isOpen, onClose, plans }: UserModalProps) {
       
       const userDoc = {
         name: name.trim(),
-        // SECURITY WARNING: Storing passwords in plaintext is insecure.
-        // In a production environment, use Firebase Authentication or hash the password.
-        password: password.trim(),
         subscriptionStartDate: now.toISOString(),
         expiryDate: expiry.toISOString(),
         status: 'Active',
@@ -63,7 +59,6 @@ export function UserModal({ isOpen, onClose, plans }: UserModalProps) {
 
       onClose();
       setName('');
-      setPassword('');
       setSelectedPlanId('');
       setNotes('');
     } catch (error) {
@@ -93,18 +88,6 @@ export function UserModal({ isOpen, onClose, plans }: UserModalProps) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. John Doe (FB)"
-              className="clay-input w-full py-4 text-sm"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-[10px] font-bold text-brand-text-muted uppercase tracking-widest ml-1">Password</label>
-            <input 
-              type="password" 
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
               className="clay-input w-full py-4 text-sm"
             />
           </div>

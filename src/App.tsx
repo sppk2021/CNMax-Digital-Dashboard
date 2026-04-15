@@ -327,12 +327,12 @@ export default function App() {
         isDarkMode={isDarkMode}
         toggleDarkMode={toggleDarkMode}
       >
-        {activeTab === 'dashboard' && <Dashboard users={users} sales={sales} expenses={expenses} setActiveTab={setActiveTab} />}
+        {activeTab === 'dashboard' && <Dashboard setActiveTab={setActiveTab} />}
         {activeTab === 'users' && <UserList users={users} plans={plans} sales={sales} />}
         {activeTab === 'sales' && <SaleList sales={sales} />}
         {activeTab === 'expenses' && <ExpenseList expenses={expenses} />}
         {activeTab === 'servers' && <ServerManagement servers={servers} />}
-        {activeTab === 'analytics' && <Analytics users={users} sales={sales} expenses={expenses} />}
+        {activeTab === 'analytics' && <Analytics />}
         {activeTab === 'plans' && <PlanManagement plans={plans} />}
         {activeTab === 'settings' && (
           <Settings 
