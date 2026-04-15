@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   Search, 
   CircleDollarSign, 
@@ -24,69 +24,215 @@ export function SaleList({ sales }: SaleListProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<'All' | 'New' | 'Renewal' | 'Expired'>('All');
   const [selectedSale, setSelectedSale] = useState<any | null>(null);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [selectedMonth, setSelectedMonth] = useState('');
 
-  const filteredSales = sales.filter(sale => {
-    const matchesSearch = sale.userName.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = typeFilter === 'All' || sale.type === typeFilter;
-    return matchesSearch && matchesType;
-  });
+  const availableMonths = useMemo(() => {
+    const months = new Set<string>();
+    sales.forEach(sale => {
+      if (sale.date) {
+        try {
+          months.add(format(parseISO(sale.date), 'yyyy-MM'));
+        } catch (e) {}
+      }
+    });
+    return Array.from(months).sort((a, b) => b.localeCompare(a));
+  }, [sales]);
+
+  const filteredSales = useMemo(() => {
+    return sales.filter(sale => {
+      const matchesSearch = sale.userName.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesType = typeFilter === 'All' || sale.type === typeFilter;
+      
+      let matchesDate = true;
+      if (sale.date) {
+        try {
+          const saleDate = parseISO(sale.date);
+          const saleMonth = format(saleDate, 'yyyy-MM');
+          
+          if (startDate && endDate) {
+            matchesDate = isWithinInterval(saleDate, { 
+              start: parseISO(startDate), 
+              end: parseISO(endDate) 
+            });
+          } else if (startDate) {
+            matchesDate = saleDate >= parseISO(startDate);
+          } else if (endDate) {
+            matchesDate = saleDate <= parseISO(endDate);
+          }
+
+          if (matchesDate && selectedMonth) {
+            matchesDate = saleMonth === selectedMonth;
+          }
+        } catch (e) {
+          // Ignore invalid dates
+        }
+      }
+
+      return matchesSearch && matchesType && matchesDate;
+    });
+  }, [sales, searchTerm, typeFilter, startDate, endDate, selectedMonth]);
 
   const totalRevenue = filteredSales.reduce((acc, s) => acc + s.amount, 0);
+  const overallTotalRevenue = sales.reduce((acc, s) => acc + s.amount, 0);
+
+  const monthlyBreakdown = useMemo(() => {
+    const breakdown: Record<string, { total: number, count: number }> = {};
+    filteredSales.forEach(sale => {
+      if (sale.date && sale.amount) {
+        try {
+          const monthKey = format(parseISO(sale.date), 'yyyy-MM');
+          if (!breakdown[monthKey]) {
+            breakdown[monthKey] = { total: 0, count: 0 };
+          }
+          breakdown[monthKey].total += sale.amount;
+          breakdown[monthKey].count += 1;
+        } catch (e) {}
+      }
+    });
+    return Object.entries(breakdown)
+      .sort((a, b) => b[0].localeCompare(a[0]))
+      .map(([month, data]) => ({
+        month: format(parseISO(`${month}-01`), 'MMMM yyyy'),
+        monthKey: month,
+        ...data
+      }));
+  }, [filteredSales]);
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
+    <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h2 className="text-xl font-bold text-brand-text mb-1">Events & Sales History</h2>
-          <p className="text-brand-text-muted text-sm">Track all transactions and subscription lifecycle events.</p>
+          <h2 className="text-2xl font-bold text-brand-text mb-1 tracking-tight">Events & Sales History</h2>
+          <p className="text-brand-text-muted text-sm font-medium">Track all transactions and subscription lifecycle events.</p>
         </div>
-        <div className="clay-card px-5 py-3 flex items-center gap-4 border-none shadow-medium bg-brand-bg/50">
-          <div className="p-2.5 bg-emerald-500/10 rounded-xl">
-            <CircleDollarSign className="w-5 h-5 text-emerald-500" />
+        <div className="flex flex-wrap gap-4">
+          <div className="clay-card px-5 py-3 flex items-center gap-4 border-none shadow-clay bg-brand-card">
+            <div className="p-2.5 bg-blue-500/10 rounded-xl">
+              <CircleDollarSign className="w-5 h-5 text-blue-500" />
+            </div>
+            <div>
+              <p className="text-[10px] text-brand-text-muted font-bold uppercase tracking-widest mb-0.5">Overall Total Sales</p>
+              <p className="text-xl font-bold text-brand-text tracking-tight">{overallTotalRevenue.toLocaleString()} Ks</p>
+            </div>
           </div>
-          <div>
-            <p className="text-[10px] text-brand-text-muted font-bold uppercase tracking-widest mb-0.5">Total Revenue</p>
-            <p className="text-lg font-bold text-brand-text">{totalRevenue.toLocaleString()} Ks</p>
+          <div className="clay-card px-5 py-3 flex items-center gap-4 border-none shadow-clay bg-brand-card">
+            <div className="p-2.5 bg-emerald-500/10 rounded-xl">
+              <Filter className="w-5 h-5 text-emerald-500" />
+            </div>
+            <div>
+              <p className="text-[10px] text-brand-text-muted font-bold uppercase tracking-widest mb-0.5">Filtered Revenue</p>
+              <p className="text-xl font-bold text-brand-text tracking-tight">{totalRevenue.toLocaleString()} Ks</p>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-text-muted opacity-50" />
-          <input 
-            type="text" 
-            placeholder="Search by customer..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="clay-input w-full pl-11 py-2.5"
-          />
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-text-muted opacity-50" />
+            <input 
+              type="text" 
+              placeholder="Search by customer..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="clay-input w-full pl-11 py-2.5"
+            />
+          </div>
+          <div className="flex bg-brand-bg p-1 rounded-xl border border-brand-border gap-1">
+            {['All', 'New', 'Renewal', 'Expired'].map((f) => (
+              <button
+                key={f}
+                onClick={() => setTypeFilter(f as any)}
+                className={cn(
+                  "px-4 py-1.5 text-[10px] font-bold rounded-lg transition-all uppercase tracking-wider",
+                  typeFilter === f 
+                    ? "bg-brand-primary text-white shadow-sm" 
+                    : "text-brand-text-muted hover:text-brand-text hover:bg-brand-primary/5"
+                )}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="flex bg-brand-bg p-1 rounded-xl border border-brand-border gap-1">
-          {['All', 'New', 'Renewal', 'Expired'].map((f) => (
-            <button
-              key={f}
-              onClick={() => setTypeFilter(f as any)}
-              className={cn(
-                "px-4 py-1.5 text-[10px] font-bold rounded-lg transition-all uppercase tracking-wider",
-                typeFilter === f 
-                  ? "bg-brand-primary text-white shadow-sm" 
-                  : "text-brand-text-muted hover:text-brand-text hover:bg-brand-primary/5"
-              )}
+        <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-bold text-brand-text-muted">From:</span>
+            <input 
+              type="date" 
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="clay-input py-2 px-3 text-sm"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-bold text-brand-text-muted">To:</span>
+            <input 
+              type="date" 
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="clay-input py-2 px-3 text-sm"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-bold text-brand-text-muted">Month:</span>
+            <select 
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="clay-input py-2 px-3 text-sm"
             >
-              {f}
+              <option value="">All Months</option>
+              {availableMonths.map(m => (
+                <option key={m} value={m}>{format(parseISO(`${m}-01`), 'MMMM yyyy')}</option>
+              ))}
+            </select>
+          </div>
+          {(startDate || endDate || selectedMonth) && (
+            <button 
+              onClick={() => {
+                setStartDate('');
+                setEndDate('');
+                setSelectedMonth('');
+              }}
+              className="text-sm text-brand-primary hover:underline font-bold"
+            >
+              Clear Date Filters
             </button>
-          ))}
+          )}
         </div>
       </div>
 
+      {/* Monthly Breakdown */}
+      {monthlyBreakdown.length > 0 && (
+        <div className="clay-card p-6 border-none shadow-clay bg-brand-card">
+          <h3 className="text-sm font-bold text-brand-text mb-6 uppercase tracking-widest flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-brand-primary" /> Monthly Breakdown
+          </h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {monthlyBreakdown.map((mb) => (
+              <div key={mb.monthKey} className="bg-brand-bg/50 p-4 rounded-2xl border border-brand-border shadow-sm">
+                <p className="text-[10px] text-brand-text-muted font-bold uppercase tracking-widest mb-1.5">{mb.month}</p>
+                <p className="text-xl font-bold text-brand-text tracking-tight">{mb.total.toLocaleString()} Ks</p>
+                <p className="text-[10px] text-brand-text-muted font-medium mt-1.5 flex items-center gap-1.5">
+                  <span className="w-1 h-1 rounded-full bg-brand-primary"></span>
+                  {mb.count} transactions
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Table */}
-      <div className="clay-card overflow-hidden border-none shadow-medium">
+      <div className="clay-card overflow-hidden border-none shadow-clay bg-brand-card">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-brand-bg border-b border-brand-border">
+              <tr className="bg-brand-bg/50 border-b border-brand-border">
                 <th className="px-6 py-3 text-[10px] font-bold text-brand-text-muted uppercase tracking-widest">Customer</th>
                 <th className="px-6 py-3 text-[10px] font-bold text-brand-text-muted uppercase tracking-widest">Date</th>
                 <th className="px-6 py-3 text-[10px] font-bold text-brand-text-muted uppercase tracking-widest">Type</th>

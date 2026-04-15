@@ -89,18 +89,18 @@ export function PlanManagement({ plans }: PlanManagementProps) {
   };
 
   return (
-    <div className="space-y-6 pb-12 animate-in fade-in duration-500">
+    <div className="space-y-8 pb-12 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h2 className="text-xl font-bold text-brand-text mb-1">Plan Configuration</h2>
-          <p className="text-brand-text-muted text-sm">Manage subscription durations and pricing.</p>
+          <h2 className="text-2xl font-bold text-brand-text mb-1 tracking-tight">Plan Configuration</h2>
+          <p className="text-brand-text-muted text-sm font-medium">Manage subscription durations and pricing.</p>
         </div>
         {!isAdding && (
           <button 
             onClick={() => setIsAdding(true)}
-            className="clay-btn-primary flex items-center gap-2 text-xs font-bold"
+            className="clay-btn-primary flex items-center gap-2 text-sm font-bold shadow-md hover:shadow-lg"
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Plus className="w-4 h-4" />
             Add Plan
           </button>
         )}
@@ -174,10 +174,10 @@ export function PlanManagement({ plans }: PlanManagementProps) {
         {plans.map((plan) => (
           <div 
             key={plan.id}
-            className="clay-card p-6 group relative border-none shadow-medium hover:shadow-lg transition-all"
+            className="clay-card p-6 group relative border-none shadow-clay bg-brand-card hover:shadow-lg transition-all"
           >
             <div className="flex items-start justify-between mb-6">
-              <div className="p-2.5 bg-brand-primary/10 rounded-xl">
+              <div className="p-3 bg-brand-primary/10 rounded-2xl">
                 <Clock className="w-5 h-5 text-brand-primary" />
               </div>
               <div className="flex items-center gap-2">
@@ -215,7 +215,7 @@ export function PlanManagement({ plans }: PlanManagementProps) {
       {/* Delete Confirmation Modal */}
       {deleteConfirmId && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="relative clay-card w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200 border-none shadow-2xl">
+          <div className="relative clay-card w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200 border-none shadow-clay bg-brand-card">
             <div className="p-8 text-center">
               <div className="w-16 h-16 bg-red-500/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
                 <AlertCircle className="w-8 h-8 text-red-500" />

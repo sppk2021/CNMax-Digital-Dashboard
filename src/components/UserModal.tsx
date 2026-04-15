@@ -76,46 +76,46 @@ export function UserModal({ isOpen, onClose, plans }: UserModalProps) {
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-md bg-white rounded-[2.5rem] border border-slate-100 shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
-        <div className="flex items-center justify-between p-8 border-b border-slate-100">
-          <h3 className="text-2xl font-bold text-slate-800">Add New User</h3>
-          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
-            <X className="w-6 h-6 text-slate-400" />
+      <div className="relative w-full max-w-md clay-card border-none shadow-clay overflow-hidden animate-in fade-in zoom-in duration-200">
+        <div className="flex items-center justify-between p-8 border-b border-brand-border bg-brand-bg/50">
+          <h3 className="text-2xl font-bold text-brand-text tracking-tight">Add New User</h3>
+          <button onClick={onClose} className="p-2 hover:bg-brand-bg rounded-xl transition-colors">
+            <X className="w-6 h-6 text-brand-text-muted" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-8 space-y-6">
           <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Facebook / Viber Name</label>
+            <label className="text-[10px] font-bold text-brand-text-muted uppercase tracking-widest ml-1">Facebook / Viber Name</label>
             <input 
               type="text" 
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. John Doe (FB)"
-              className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-brand-sidebar/20 transition-all text-slate-800"
+              className="clay-input w-full py-4 text-sm"
             />
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Password</label>
+            <label className="text-[10px] font-bold text-brand-text-muted uppercase tracking-widest ml-1">Password</label>
             <input 
               type="password" 
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-brand-sidebar/20 transition-all text-slate-800"
+              className="clay-input w-full py-4 text-sm"
             />
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Select Subscription Plan</label>
+            <label className="text-[10px] font-bold text-brand-text-muted uppercase tracking-widest ml-1">Select Subscription Plan</label>
             <select
               required
               value={selectedPlanId}
               onChange={(e) => setSelectedPlanId(e.target.value)}
-              className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-brand-sidebar/20 transition-all text-slate-800 appearance-none"
+              className="clay-input w-full py-4 text-sm appearance-none"
             >
               <option value="" disabled>Choose a plan...</option>
               {plans.map(plan => (
@@ -125,24 +125,24 @@ export function UserModal({ isOpen, onClose, plans }: UserModalProps) {
               ))}
             </select>
             {plans.length === 0 && (
-              <p className="text-xs text-red-500 mt-2 ml-1">No plans available. Please create a plan first.</p>
+              <p className="text-[10px] font-bold text-red-500 mt-2 ml-1 uppercase tracking-widest">No plans available. Please create a plan first.</p>
             )}
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Notes (Optional)</label>
+            <label className="text-[10px] font-bold text-brand-text-muted uppercase tracking-widest ml-1">Notes (Optional)</label>
             <textarea 
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Payment method, special requests, etc."
               rows={3}
-              className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-brand-sidebar/20 transition-all resize-none text-slate-800"
+              className="clay-input w-full py-4 text-sm resize-none"
             />
           </div>
 
-          <div className="bg-brand-sidebar/5 border border-brand-sidebar/10 p-5 rounded-2xl">
-            <p className="text-xs text-brand-sidebar font-bold uppercase tracking-wider mb-2">Subscription Details</p>
-            <p className="text-sm text-slate-600 font-medium">
+          <div className="bg-brand-primary/5 border border-brand-primary/10 p-5 rounded-2xl">
+            <p className="text-[10px] text-brand-primary font-bold uppercase tracking-widest mb-2">Subscription Details</p>
+            <p className="text-xs text-brand-text-muted font-medium leading-relaxed">
               {selectedPlanId 
                 ? `New users will start with a ${plans.find(p => p.id === selectedPlanId)?.durationDays}-day active subscription.`
                 : 'Select a plan to see subscription details.'}
@@ -152,7 +152,7 @@ export function UserModal({ isOpen, onClose, plans }: UserModalProps) {
           <button
             type="submit"
             disabled={loading || plans.length === 0}
-            className="w-full flex items-center justify-center gap-2 bg-brand-sidebar hover:bg-brand-blue disabled:opacity-50 text-white font-bold py-4 px-6 rounded-2xl transition-all shadow-xl shadow-brand-sidebar/20 mt-4"
+            className="clay-btn-primary w-full flex items-center justify-center gap-2 py-4 px-6 text-sm font-bold shadow-lg shadow-brand-primary/20 mt-4"
           >
             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Create User & Sale'}
           </button>

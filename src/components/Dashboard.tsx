@@ -109,7 +109,10 @@ export function Dashboard({ users, sales, expenses, setActiveTab }: DashboardPro
   const netProfitThisMonth = revenueThisMonth - expensesThisMonth;
 
   // Monthly Comparison Metrics
-  const expiredEventsThisMonth = sales.filter(s => s.type === 'Expired' && isInMonth(s.date, currentMonth));
+  const renewedUserIdsThisMonth = new Set(renewedSalesThisMonth.map(s => s.userId));
+  const expiredSalesThisMonth = sales.filter(s => s.type === 'Expired' && isInMonth(s.date, currentMonth));
+  const expiredEventsThisMonth = expiredSalesThisMonth.filter(s => !renewedUserIdsThisMonth.has(s.userId));
+  
   const prevMonthTotalUsers = users.filter(u => {
     if (!u.createdAt) return false;
     try {
@@ -136,18 +139,25 @@ export function Dashboard({ users, sales, expenses, setActiveTab }: DashboardPro
   // Advanced Metrics
   const avgPlanPrice = sales.length > 0 ? sales.reduce((acc, s) => acc + s.amount, 0) / sales.length : 0;
   const projectedRevenue = activeUsers.length * avgPlanPrice;
-  const churnRate = users.length > 0 ? (expiredEventsThisMonth.length / users.length) * 100 : 0;
+  const churnBase = activeUsers.length + expiredEventsThisMonth.length;
+  const churnRate = churnBase > 0 ? (expiredEventsThisMonth.length / churnBase) * 100 : 0;
 
   // Growth Trend Data (Last 12 Months)
   const growthData = useMemo(() => {
     const last12Months = Array.from({ length: 12 }).map((_, i) => subMonths(currentMonth, 11 - i));
     return last12Months.map(month => {
       const newInMonth = users.filter(u => isInMonth(u.createdAt, month)).length;
-      const expiredInMonth = sales.filter(s => s.type === 'Expired' && isInMonth(s.date, month)).length;
+      
+      const renewalsInMonth = sales.filter(s => s.type === 'Renewal' && isInMonth(s.date, month));
+      const renewedIds = new Set(renewalsInMonth.map(s => s.userId));
+      
+      const expiredSalesInMonth = sales.filter(s => s.type === 'Expired' && isInMonth(s.date, month));
+      const trulyExpiredInMonth = expiredSalesInMonth.filter(s => !renewedIds.has(s.userId)).length;
+      
       return {
         name: format(month, 'MMM yy'),
         new: newInMonth,
-        net: newInMonth - expiredInMonth,
+        net: newInMonth - trulyExpiredInMonth,
       };
     });
   }, [users, sales, currentMonth]);
@@ -188,41 +198,19 @@ export function Dashboard({ users, sales, expenses, setActiveTab }: DashboardPro
   ];
 
   return (
-    <div className="space-y-6 pb-12 animate-in fade-in duration-500">
+    <div className="space-y-8 pb-12 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h2 className="text-xl font-bold text-brand-text mb-1">Business Overview</h2>
-          <p className="text-brand-text-muted text-sm">Real-time summary of your business performance.</p>
+          <h2 className="text-2xl font-bold text-brand-text mb-1 tracking-tight">Business Overview</h2>
+          <p className="text-brand-text-muted text-sm font-medium">Real-time summary of your business performance.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <button 
-            onClick={async () => {
-              if (window.confirm('Are you sure you want to clear all data? This action cannot be undone.')) {
-                await clearAllData();
-                alert('All data cleared successfully!');
-              }
-            }}
-            className="clay-btn text-red-500 hover:text-red-600 hover:bg-red-500/5 border-red-500/10 text-xs font-bold"
-          >
-            Clear Data
-          </button>
-          <button 
-            onClick={async () => {
-              if (window.confirm('Seed sample data?')) {
-                await seedSampleData();
-                alert('Sample data seeded!');
-              }
-            }}
-            className="clay-btn text-xs font-bold"
-          >
-            Seed Data
-          </button>
-          <button 
             onClick={() => setActiveTab('sales')}
-            className="clay-btn-primary flex items-center gap-2 text-xs font-bold"
+            className="clay-btn-primary flex items-center gap-2 text-sm font-bold shadow-md hover:shadow-lg"
           >
-            <DollarSign className="w-3.5 h-3.5" />
-            Sales History
+            <DollarSign className="w-4 h-4" />
+            View Sales History
           </button>
         </div>
       </div>
@@ -231,36 +219,37 @@ export function Dashboard({ users, sales, expenses, setActiveTab }: DashboardPro
         {stats.map((stat) => (
           <div 
             key={stat.label}
-            className="clay-card p-5 group border-none shadow-medium"
+            className="metric-card group border-none shadow-clay"
           >
-            <div className="flex items-start justify-between mb-4">
-              <div className={cn("p-2.5 rounded-xl", stat.bg)}>
-                <stat.icon className={cn("w-4.5 h-4.5", stat.color)} />
+            <div className="flex items-start justify-between mb-2">
+              <div className={cn("p-3 rounded-2xl", stat.bg)}>
+                <stat.icon className={cn("w-5 h-5", stat.color)} />
               </div>
               <span className={cn(
-                "text-[10px] font-bold px-2 py-0.5 rounded-lg",
+                "inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-lg",
                 stat.trend.startsWith('+') ? "bg-emerald-500/10 text-emerald-600" : "bg-red-500/10 text-red-600"
               )}>
+                {stat.trend.startsWith('+') ? <TrendingUp className="w-3 h-3" /> : <TrendingUp className="w-3 h-3 rotate-180" />}
                 {stat.trend}
               </span>
             </div>
             <div>
               <p className="text-[10px] font-bold text-brand-text-muted uppercase tracking-widest mb-1">{stat.label}</p>
-              <h3 className="text-xl font-bold text-brand-text">{stat.value}</h3>
+              <h3 className="text-2xl font-bold text-brand-text tracking-tight">{stat.value}</h3>
             </div>
           </div>
         ))}
       </div>
 
-      <div className="clay-card p-6 md:p-8 border-none shadow-medium">
+      <div className="clay-card p-6 md:p-8 border-none shadow-clay bg-brand-card">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <h3 className="text-lg font-bold text-brand-text flex items-center gap-3">
-            <div className="p-2 bg-brand-primary/10 rounded-xl">
+            <div className="p-2.5 bg-brand-primary/10 rounded-2xl">
               <TrendingUp className="w-5 h-5 text-brand-primary" />
             </div>
             Monthly Performance
           </h3>
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-brand-bg rounded-full border border-brand-border">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-brand-bg/50 rounded-xl border border-brand-border shadow-sm">
             <Clock className="w-3.5 h-3.5 text-brand-text-muted opacity-50" />
             <span className="text-[10px] font-bold text-brand-text-muted uppercase tracking-widest">{format(now, 'MMMM yyyy')}</span>
           </div>
@@ -314,10 +303,10 @@ export function Dashboard({ users, sales, expenses, setActiveTab }: DashboardPro
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
         {/* Growth Trend Chart */}
-        <div className="lg:col-span-2 clay-card p-6 md:p-8 border-none shadow-medium">
+        <div className="lg:col-span-2 clay-card p-6 md:p-8 border-none shadow-clay bg-brand-card">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-10">
             <h3 className="text-lg font-bold text-brand-text flex items-center gap-3">
-              <div className="p-2 bg-blue-500/10 rounded-xl">
+              <div className="p-2.5 bg-blue-500/10 rounded-2xl">
                 <TrendingUp className="w-5 h-5 text-blue-500" />
               </div>
               User Growth Trend

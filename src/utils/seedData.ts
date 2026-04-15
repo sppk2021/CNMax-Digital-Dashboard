@@ -49,74 +49,128 @@ export const seedSampleData = async () => {
 
     // 3. Users & Sales
     const now = new Date();
-    const month0 = subMonths(now, 2);
-    const month1 = subMonths(now, 1);
+    const currentYear = now.getFullYear();
+    const currentMonthIndex = now.getMonth();
 
-    // Month 0: 100 users
-    const usersM0: any[] = [];
-    for (let i = 0; i < 100; i++) {
-      const user = {
-        name: `User ${i + 1}`,
-        createdAt: month0.toISOString(),
-        expiryDate: addDays(month0, 30).toISOString(),
-        subscriptionStartDate: month0.toISOString(),
-        status: 'Active'
-      };
-      const docRef = await addDoc(collection(db, 'users'), user);
-      usersM0.push({ id: docRef.id, ...user });
+    let activeUsers: any[] = [];
+    let userCounter = 1;
+
+    // Generate data from January up to the current month
+    for (let m = 0; m <= currentMonthIndex; m++) {
+      const monthDate = new Date(currentYear, m, 15); // Middle of the month
       
-      await addDoc(collection(db, 'sales'), {
-        userId: docRef.id,
-        userName: user.name,
-        amount: 5000,
-        date: month0.toISOString(),
-        type: 'New',
-        planName: '1 Month'
-      });
+      if (m === 0) {
+        // January: 50 new users, 1-month plan
+        for (let i = 0; i < 50; i++) {
+          const user = {
+            name: `User ${userCounter++}`,
+            createdAt: monthDate.toISOString(),
+            expiryDate: addDays(monthDate, 30).toISOString(),
+            subscriptionStartDate: monthDate.toISOString(),
+            status: 'Active',
+            planName: '1 Month'
+          };
+          const docRef = await addDoc(collection(db, 'users'), user);
+          activeUsers.push({ id: docRef.id, ...user });
+          
+          await addDoc(collection(db, 'sales'), {
+            userId: docRef.id,
+            userName: user.name,
+            amount: 5000,
+            date: monthDate.toISOString(),
+            type: 'New',
+            planName: '1 Month'
+          });
+        }
+        
+        // Add a couple of 3-month plan users to demonstrate the multi-month logic
+        for (let i = 0; i < 5; i++) {
+          const user = {
+            name: `Pro User ${i + 1}`,
+            createdAt: monthDate.toISOString(),
+            expiryDate: addDays(monthDate, 90).toISOString(),
+            subscriptionStartDate: monthDate.toISOString(),
+            status: 'Active',
+            planName: '3 Months'
+          };
+          const docRef = await addDoc(collection(db, 'users'), user);
+          activeUsers.push({ id: docRef.id, ...user });
+          
+          await addDoc(collection(db, 'sales'), {
+            userId: docRef.id,
+            userName: user.name,
+            amount: 14000,
+            date: monthDate.toISOString(), // Full amount recorded in January
+            type: 'New',
+            planName: '3 Months'
+          });
+        }
+      } else {
+        // Subsequent months
+        // 10 users expire
+        const expiredThisMonth = activeUsers.splice(0, 10);
+        for (const user of expiredThisMonth) {
+          await updateDoc(doc(db, 'users', user.id), { status: 'Expired' });
+          await addDoc(collection(db, 'sales'), {
+            userId: user.id,
+            userName: user.name,
+            amount: 0,
+            date: monthDate.toISOString(),
+            type: 'Expired'
+          });
+        }
+
+        // Remaining users renew (only if their expiry date is within or before this month)
+        for (const user of activeUsers) {
+          const expiryDate = new Date(user.expiryDate);
+          if (expiryDate <= addDays(monthDate, 15)) { // If expiring around this month
+            const planDuration = user.planName === '3 Months' ? 90 : 30;
+            const planPrice = user.planName === '3 Months' ? 14000 : 5000;
+            const newExpiry = addDays(monthDate, planDuration).toISOString();
+            
+            await updateDoc(doc(db, 'users', user.id), {
+              expiryDate: newExpiry,
+              lastRenewedAt: monthDate.toISOString(),
+              status: 'Active'
+            });
+            user.expiryDate = newExpiry; // update local state
+
+            await addDoc(collection(db, 'sales'), {
+              userId: user.id,
+              userName: user.name,
+              amount: planPrice,
+              date: monthDate.toISOString(),
+              type: 'Renewal',
+              planName: user.planName
+            });
+          }
+        }
+
+        // 10 new users join
+        for (let i = 0; i < 10; i++) {
+          const user = {
+            name: `User ${userCounter++}`,
+            createdAt: monthDate.toISOString(),
+            expiryDate: addDays(monthDate, 30).toISOString(),
+            subscriptionStartDate: monthDate.toISOString(),
+            status: 'Active',
+            planName: '1 Month'
+          };
+          const docRef = await addDoc(collection(db, 'users'), user);
+          activeUsers.push({ id: docRef.id, ...user });
+          
+          await addDoc(collection(db, 'sales'), {
+            userId: docRef.id,
+            userName: user.name,
+            amount: 5000,
+            date: monthDate.toISOString(),
+            type: 'New',
+            planName: '1 Month'
+          });
+        }
+      }
     }
 
-    // Month 1: 95 renew, 5 expire, 10 new
-    const renewed = usersM0.slice(0, 95);
-    const expired = usersM0.slice(95);
-
-    for (const user of renewed) {
-      await updateDoc(doc(db, 'users', user.id), {
-        expiryDate: addDays(month1, 30).toISOString(),
-        lastRenewedAt: month1.toISOString()
-      });
-      await addDoc(collection(db, 'sales'), {
-        userId: user.id,
-        userName: user.name,
-        amount: 5000,
-        date: month1.toISOString(),
-        type: 'Renewal',
-        planName: '1 Month'
-      });
-    }
-    for (const user of expired) {
-      await updateDoc(doc(db, 'users', user.id), { status: 'Expired' });
-      await addDoc(collection(db, 'sales'), {
-        userId: user.id,
-        userName: user.name,
-        amount: 0,
-        date: month1.toISOString(),
-        type: 'Expired'
-      });
-    }
-    for (let i = 0; i < 10; i++) {
-      const user = {
-        name: `New User ${i + 1}`,
-        createdAt: month1.toISOString(),
-        expiryDate: addDays(month1, 30).toISOString(),
-        subscriptionStartDate: month1.toISOString(),
-        status: 'Active'
-      };
-      await addDoc(collection(db, 'users'), user);
-    }
-
-    // Month 2: All active renew, 3 new
-    // (Simplified for brevity, can be expanded)
-    
     console.log("Sample data seeded successfully.");
   } catch (error) {
     console.error("Error seeding data:", error);

@@ -93,53 +93,53 @@ export function ExpenseList({ expenses }: ExpenseListProps) {
   };
 
   return (
-    <div className="space-y-6 pb-12 animate-in fade-in duration-500">
+    <div className="space-y-8 pb-12 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h2 className="text-xl font-bold text-brand-text mb-1">Expenses</h2>
-          <p className="text-brand-text-muted text-sm">Track and manage your business expenditures.</p>
+          <h2 className="text-2xl font-bold text-brand-text mb-1 tracking-tight">Expenses</h2>
+          <p className="text-brand-text-muted text-sm font-medium">Track and manage your business expenditures.</p>
         </div>
         <button 
           onClick={() => setIsAddModalOpen(true)}
-          className="clay-btn-primary flex items-center gap-2 text-xs font-bold"
+          className="clay-btn-primary flex items-center gap-2 text-sm font-bold shadow-md hover:shadow-lg"
         >
-          <Plus className="w-3.5 h-3.5" />
+          <Plus className="w-4 h-4" />
           Add Expense
         </button>
       </div>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-        <div className="clay-card p-5 border-none shadow-medium">
+        <div className="clay-card p-5 border-none shadow-clay">
           <div className="flex items-center gap-4">
-            <div className="p-2.5 bg-red-500/10 rounded-xl text-red-500">
+            <div className="p-3 bg-red-500/10 rounded-2xl text-red-500">
               <ArrowDownRight className="w-5 h-5" />
             </div>
             <div>
               <p className="text-[10px] font-bold text-brand-text-muted uppercase tracking-widest mb-1">Total Expenses</p>
-              <h3 className="text-lg font-bold text-brand-text">{totalExpenses.toLocaleString()} Ks</h3>
+              <h3 className="text-2xl font-bold text-brand-text tracking-tight">{totalExpenses.toLocaleString()} Ks</h3>
             </div>
           </div>
         </div>
-        <div className="clay-card p-5 border-none shadow-medium">
+        <div className="clay-card p-5 border-none shadow-clay">
           <div className="flex items-center gap-4">
-            <div className="p-2.5 bg-blue-500/10 rounded-xl text-blue-500">
+            <div className="p-3 bg-blue-500/10 rounded-2xl text-blue-500">
               <Receipt className="w-5 h-5" />
             </div>
             <div>
               <p className="text-[10px] font-bold text-brand-text-muted uppercase tracking-widest mb-1">Transaction Count</p>
-              <h3 className="text-lg font-bold text-brand-text">{filteredExpenses.length}</h3>
+              <h3 className="text-2xl font-bold text-brand-text tracking-tight">{filteredExpenses.length}</h3>
             </div>
           </div>
         </div>
-        <div className="clay-card p-5 border-none shadow-medium">
+        <div className="clay-card p-5 border-none shadow-clay">
           <div className="flex items-center gap-4">
-            <div className="p-2.5 bg-brand-primary/10 rounded-xl text-brand-primary">
+            <div className="p-3 bg-brand-primary/10 rounded-2xl text-brand-primary">
               <Tag className="w-5 h-5" />
             </div>
             <div>
               <p className="text-[10px] font-bold text-brand-text-muted uppercase tracking-widest mb-1">Top Category</p>
-              <h3 className="text-lg font-bold text-brand-text">
+              <h3 className="text-2xl font-bold text-brand-text tracking-tight">
                 {selectedCategory === 'All' ? 'Mixed' : selectedCategory}
               </h3>
             </div>
@@ -178,11 +178,11 @@ export function ExpenseList({ expenses }: ExpenseListProps) {
       </div>
 
       {/* Expense Table */}
-      <div className="clay-card overflow-hidden border-none shadow-medium">
+      <div className="clay-card overflow-hidden border-none shadow-clay bg-brand-card">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-brand-primary/5 border-b border-brand-border">
+              <tr className="bg-brand-bg/50 border-b border-brand-border">
                 <th className="px-6 py-4 text-[10px] font-bold text-brand-text-muted uppercase tracking-widest">Expense Details</th>
                 <th className="px-6 py-4 text-[10px] font-bold text-brand-text-muted uppercase tracking-widest">Category</th>
                 <th className="px-6 py-4 text-[10px] font-bold text-brand-text-muted uppercase tracking-widest">Date</th>
@@ -268,7 +268,7 @@ export function ExpenseList({ expenses }: ExpenseListProps) {
       {/* Add/Edit Modal */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="relative clay-card w-full max-w-md p-8 animate-in zoom-in-95 duration-200 border-none shadow-2xl">
+          <div className="relative clay-card w-full max-w-md p-8 animate-in zoom-in-95 duration-200 border-none shadow-clay">
             <div className="flex items-center justify-between mb-8">
               <h3 className="text-lg font-bold text-brand-text">{editingExpense ? 'Edit Expense' : 'Add New Expense'}</h3>
               <button 

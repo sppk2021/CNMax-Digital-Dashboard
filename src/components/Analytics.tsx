@@ -1,4 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { db } from '../firebase';
 import { 
   BarChart, 
   Bar, 
@@ -29,7 +31,8 @@ import {
   UserMinus,
   DollarSign,
   Download,
-  Receipt
+  Receipt,
+  Loader2
 } from 'lucide-react';
 import { cn, getStatus, isInMonth, getNow } from '../utils';
 import { format, startOfMonth, subMonths, addMonths, isBefore, parseISO } from 'date-fns';
@@ -42,52 +45,131 @@ interface AnalyticsProps {
 
 export function Analytics({ users, sales, expenses }: AnalyticsProps) {
   const [selectedMonth, setSelectedMonth] = useState(getNow());
+  
+  // Local state for optimized monthly metrics fetching
+  const [fetchedSales, setFetchedSales] = useState<any[]>([]);
+  const [fetchedExpenses, setFetchedExpenses] = useState<any[]>([]);
+  const [fetchedNewUsers, setFetchedNewUsers] = useState<any[]>([]);
+  const [potentialActiveUsers, setPotentialActiveUsers] = useState<any[]>([]);
+  const [loadingMetrics, setLoadingMetrics] = useState(true);
+
+  useEffect(() => {
+    setLoadingMetrics(true);
+    const prevMonth = subMonths(selectedMonth, 1);
+    const startOfPrev = startOfMonth(prevMonth);
+    const endOfCurrent = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 0, 23, 59, 59, 999);
+    
+    const startISO = startOfPrev.toISOString();
+    const endISO = endOfCurrent.toISOString();
+
+    const salesQ = query(collection(db, 'sales'), where('date', '>=', startISO), where('date', '<=', endISO));
+    const expensesQ = query(collection(db, 'expenses'), where('date', '>=', startISO), where('date', '<=', endISO));
+    const newUsersQ = query(collection(db, 'users'), where('createdAt', '>=', startISO), where('createdAt', '<=', endISO));
+    const activeUsersQ = query(collection(db, 'users'), where('expiryDate', '>=', startISO));
+
+    let salesLoaded = false;
+    let expensesLoaded = false;
+    let newUsersLoaded = false;
+    let activeUsersLoaded = false;
+
+    const checkLoading = () => {
+      if (salesLoaded && expensesLoaded && newUsersLoaded && activeUsersLoaded) {
+        setLoadingMetrics(false);
+      }
+    };
+
+    const unsubSales = onSnapshot(salesQ, snapshot => {
+      setFetchedSales(snapshot.docs.map(d => ({id: d.id, ...d.data()})));
+      salesLoaded = true;
+      checkLoading();
+    });
+    const unsubExpenses = onSnapshot(expensesQ, snapshot => {
+      setFetchedExpenses(snapshot.docs.map(d => ({id: d.id, ...d.data()})));
+      expensesLoaded = true;
+      checkLoading();
+    });
+    const unsubNewUsers = onSnapshot(newUsersQ, snapshot => {
+      setFetchedNewUsers(snapshot.docs.map(d => ({id: d.id, ...d.data()})));
+      newUsersLoaded = true;
+      checkLoading();
+    });
+    const unsubActiveUsers = onSnapshot(activeUsersQ, snapshot => {
+      setPotentialActiveUsers(snapshot.docs.map(d => ({id: d.id, ...d.data()})));
+      activeUsersLoaded = true;
+      checkLoading();
+    });
+
+    return () => {
+      unsubSales();
+      unsubExpenses();
+      unsubNewUsers();
+      unsubActiveUsers();
+    };
+  }, [selectedMonth]);
 
   const prevMonth = subMonths(selectedMonth, 1);
   
   const currentMonthData = useMemo(() => {
-    const startOfCurrent = startOfMonth(selectedMonth);
+    const endOfCurrent = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 0, 23, 59, 59, 999);
     
-    const newUsers = users.filter(u => isInMonth(u.createdAt, selectedMonth));
-    const renewals = sales.filter(s => s.type === 'Renewal' && isInMonth(s.date, selectedMonth));
-    const totalSales = sales.filter(s => isInMonth(s.date, selectedMonth));
-    const revenue = totalSales.reduce((acc, s) => acc + s.amount, 0);
-    const monthlyExpenses = expenses.filter(e => isInMonth(e.date, selectedMonth));
-    const totalExpenses = monthlyExpenses.reduce((acc, e) => acc + e.amount, 0);
-    const netProfit = revenue - totalExpenses;
+    // Filter fetched data for the selected month
+    const monthlySales = fetchedSales.filter(s => isInMonth(s.date, selectedMonth));
+    const monthlyExpenses = fetchedExpenses.filter(e => isInMonth(e.date, selectedMonth));
+    const newUsers = fetchedNewUsers.filter(u => isInMonth(u.createdAt, selectedMonth));
     
-    // Previous Month Total Users (Total users created before this month)
-    const prevMonthTotalUsers = users.filter(u => {
-      if (!u.createdAt) return false;
+    // Renewals: Users who renewed within the selected month
+    const renewalSales = monthlySales.filter(s => s.type === 'Renewal');
+    const renewedUserIds = new Set(renewalSales.map(s => s.userId));
+    
+    // Expired Users: Users whose subscriptions expired within the selected month, excluding those who renewed in the same month.
+    const expiredSales = monthlySales.filter(s => s.type === 'Expired');
+    const expiredThisMonth = expiredSales.filter(s => !renewedUserIds.has(s.userId));
+    
+    // Active Users: Total active subscriptions at the end of the selected month.
+    const activeUsers = potentialActiveUsers.filter(u => {
+      if (!u.createdAt || !u.expiryDate) return false;
       try {
-        return isBefore(parseISO(u.createdAt), startOfCurrent);
+        const createdDate = parseISO(u.createdAt);
+        if (createdDate > endOfCurrent) return false;
+
+        // Exclude users who expired this month and did not renew
+        if (expiredThisMonth.some(s => s.userId === u.id)) {
+          return false;
+        }
+
+        // Include users who renewed this month
+        if (renewedUserIds.has(u.id)) {
+          return true;
+        }
+
+        // Include previously active users whose expiry date extends beyond this month
+        const expiryDate = parseISO(u.expiryDate);
+        return expiryDate >= endOfCurrent;
       } catch (e) {
         return false;
       }
-    }).length;
+    });
+
+    const totalSales = monthlySales;
+    const revenue = totalSales.reduce((acc, s) => acc + s.amount, 0);
+    const totalExpenses = monthlyExpenses.reduce((acc, e) => acc + e.amount, 0);
+    const netProfit = revenue - totalExpenses;
     
-    // Expired users this month (drop-off) - using events for accuracy
-    const expiredEvents = sales.filter(s => s.type === 'Expired' && isInMonth(s.date, selectedMonth));
-    
-    // Current Active Users (users currently active)
-    const activeUsers = users.filter(u => getStatus(u.expiryDate, u.subscriptionStartDate) === 'Active').length;
-    
-    // Net Change
-    const netChange = newUsers.length - expiredEvents.length;
+    // Net Change (Monthly)
+    const netChange = newUsers.length - expiredThisMonth.length;
 
     return { 
       newUsers, 
-      renewals, 
+      renewals: renewalSales, 
       totalSales, 
       revenue, 
       totalExpenses,
       netProfit,
-      expiredThisMonth: expiredEvents, // Renamed internally for consistency with UI
-      prevMonthTotalUsers,
-      activeUsers,
+      expiredThisMonth,
+      activeUsers: activeUsers.length,
       netChange
     };
-  }, [users, sales, expenses, selectedMonth]);
+  }, [fetchedSales, fetchedExpenses, fetchedNewUsers, potentialActiveUsers, selectedMonth]);
 
   const handleDownloadReport = () => {
     const monthStr = format(selectedMonth, 'MMMM_yyyy');
@@ -96,15 +178,13 @@ export function Analytics({ users, sales, expenses }: AnalyticsProps) {
     // Summary Section
     csvContent += `Monthly Report: ${format(selectedMonth, 'MMMM yyyy')}\n\n`;
     csvContent += "Metric,Value\n";
-    csvContent += `Previous Month Total Users,${currentMonthData.prevMonthTotalUsers}\n`;
-    csvContent += `New Users (Growth),${currentMonthData.newUsers.length}\n`;
-    csvContent += `Expired Users (Drop-off),${currentMonthData.expiredThisMonth.length}\n`;
-    csvContent += `Net Change,${currentMonthData.netChange}\n`;
-    csvContent += `Current Active Users,${currentMonthData.activeUsers}\n`;
+    csvContent += `New Users,${currentMonthData.newUsers.length}\n`;
+    csvContent += `Renewals,${currentMonthData.renewals.length}\n`;
+    csvContent += `Expired Users,${currentMonthData.expiredThisMonth.length}\n`;
+    csvContent += `Active Users,${currentMonthData.activeUsers}\n`;
     csvContent += `Monthly Revenue,${currentMonthData.revenue} Ks\n`;
     csvContent += `Monthly Expenses,${currentMonthData.totalExpenses} Ks\n`;
-    csvContent += `Net Profit,${currentMonthData.netProfit} Ks\n`;
-    csvContent += `Total Renewals,${currentMonthData.renewals.length}\n\n`;
+    csvContent += `Net Profit,${currentMonthData.netProfit} Ks\n\n`;
 
     // New Users Section
     csvContent += "NEW USERS\nName,Join Date,Plan\n";
@@ -118,24 +198,24 @@ export function Analytics({ users, sales, expenses }: AnalyticsProps) {
     csvContent += "\n";
 
     // Renewed Users Section
-    csvContent += "RENEWED USERS\nName,Renewal Date,Plan,Amount\n";
+    csvContent += "RENEWED USERS\nName,Renewal Date,Plan\n";
     currentMonthData.renewals.forEach(s => {
       let dateStr = 'N/A';
       if (s.date) {
         try { dateStr = format(parseISO(s.date), 'yyyy-MM-dd'); } catch(e) {}
       }
-      csvContent += `"${s.userName}","${dateStr}","${s.planName || 'N/A'}","${s.amount}"\n`;
+      csvContent += `"${s.userName}","${dateStr}","${s.planName || 'N/A'}"\n`;
     });
     csvContent += "\n";
 
     // Expired Users Section
     csvContent += "EXPIRED USERS\nName,Expiry Date,Plan\n";
-    currentMonthData.expiredThisMonth.forEach(u => {
+    currentMonthData.expiredThisMonth.forEach(s => {
       let dateStr = 'N/A';
-      if (u.expiryDate) {
-        try { dateStr = format(parseISO(u.expiryDate), 'yyyy-MM-dd'); } catch(e) {}
+      if (s.date) {
+        try { dateStr = format(parseISO(s.date), 'yyyy-MM-dd'); } catch(e) {}
       }
-      csvContent += `"${u.name}","${dateStr}","${u.planName || 'N/A'}"\n`;
+      csvContent += `"${s.userName}","${dateStr}","${s.planName || 'N/A'}"\n`;
     });
 
     const encodedUri = encodeURI(csvContent);
@@ -148,12 +228,12 @@ export function Analytics({ users, sales, expenses }: AnalyticsProps) {
   };
 
   const prevMonthData = useMemo(() => {
-    const newUsers = users.filter(u => isInMonth(u.createdAt, prevMonth));
-    const totalSales = sales.filter(s => isInMonth(s.date, prevMonth));
+    const newUsers = fetchedNewUsers.filter(u => isInMonth(u.createdAt, prevMonth));
+    const totalSales = fetchedSales.filter(s => isInMonth(s.date, prevMonth));
     const revenue = totalSales.reduce((acc, s) => acc + s.amount, 0);
-    const prevMonthExpenses = expenses.filter(e => isInMonth(e.date, prevMonth)).reduce((acc, e) => acc + e.amount, 0);
+    const prevMonthExpenses = fetchedExpenses.filter(e => isInMonth(e.date, prevMonth)).reduce((acc, e) => acc + e.amount, 0);
     return { newUsers, totalSales, revenue, expenses: prevMonthExpenses };
-  }, [users, sales, expenses, prevMonth]);
+  }, [fetchedNewUsers, fetchedSales, fetchedExpenses, prevMonth]);
 
   const revenueData = useMemo(() => {
     const last6Months = Array.from({ length: 6 }).map((_, i) => subMonths(new Date(), 5 - i));
@@ -187,63 +267,57 @@ export function Analytics({ users, sales, expenses }: AnalyticsProps) {
     return Object.entries(counts).map(([name, value]) => ({ name, value }));
   }, [users]);
 
-  const churnData = useMemo(() => {
+  const expiredData = useMemo(() => {
     const last6Months = Array.from({ length: 6 }).map((_, i) => subMonths(new Date(), 5 - i));
     return last6Months.map(month => {
-      const startOfThisMonth = startOfMonth(month);
+      const expiredSales = sales.filter(s => s.type === 'Expired' && isInMonth(s.date, month));
+      const renewalSales = sales.filter(s => s.type === 'Renewal' && isInMonth(s.date, month));
+      const renewedUserIds = new Set(renewalSales.map(s => s.userId));
       
-      // Total users who were active at the START of this month
-      // (Created before this month AND not expired before this month)
-      const usersAtStart = users.filter(u => {
-        if (!u.createdAt || !u.expiryDate) return false;
-        try {
-          const created = parseISO(u.createdAt);
-          const expiry = parseISO(u.expiryDate);
-          return isBefore(created, startOfThisMonth) && isBefore(startOfThisMonth, expiry);
-        } catch (e) {
-          return false;
-        }
-      }).length;
-
-      const expiredInMonth = sales.filter(s => s.type === 'Expired' && isInMonth(s.date, month)).length;
-      
-      const churnRate = usersAtStart > 0 ? (expiredInMonth / usersAtStart) * 100 : 0;
+      const trulyExpired = expiredSales.filter(s => !renewedUserIds.has(s.userId));
 
       return {
         name: format(month, 'MMM'),
-        rate: parseFloat(churnRate.toFixed(1)),
-        expired: expiredInMonth,
-        base: usersAtStart
+        expired: trulyExpired.length,
       };
     });
-  }, [users, sales]);
+  }, [sales]);
 
   const COLORS = ['#3b82f6', '#f97316', '#10b981', '#a855f7', '#f43f5e'];
+
+  if (loadingMetrics) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+        <Loader2 className="w-8 h-8 text-brand-primary animate-spin" />
+        <p className="text-brand-text-muted text-sm font-medium">Loading monthly metrics...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 pb-12 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h2 className="text-xl font-bold text-brand-text mb-1">Analytics & Reports</h2>
-          <p className="text-brand-text-muted text-sm">Deep dive into your monthly performance metrics.</p>
+          <h2 className="text-2xl font-bold text-brand-text mb-1 tracking-tight">Analytics & Reports</h2>
+          <p className="text-brand-text-muted text-sm font-medium">Deep dive into your monthly performance metrics.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <button
             onClick={handleDownloadReport}
-            className="clay-btn flex items-center gap-2 text-xs font-bold"
+            className="clay-btn flex items-center gap-2 text-sm font-bold shadow-sm"
           >
-            <Download className="w-3.5 h-3.5" />
+            <Download className="w-4 h-4" />
             Download Report
           </button>
-          <div className="flex items-center gap-2 bg-brand-bg p-1 rounded-xl border border-brand-border">
+          <div className="flex items-center gap-2 bg-brand-card p-1.5 rounded-xl border border-brand-border shadow-sm">
             <button 
               onClick={() => setSelectedMonth(subMonths(selectedMonth, 1))}
               className="p-1.5 hover:bg-brand-primary/10 rounded-lg transition-colors text-brand-text-muted hover:text-brand-primary"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <div className="flex items-center gap-2 px-2 text-[10px] font-bold text-brand-text uppercase tracking-widest">
-              <Calendar className="w-3.5 h-3.5 text-brand-primary" />
+            <div className="flex items-center gap-2 px-3 text-xs font-bold text-brand-text uppercase tracking-widest">
+              <Calendar className="w-4 h-4 text-brand-primary" />
               {format(selectedMonth, 'MMMM yyyy')}
             </div>
             <button 
@@ -257,42 +331,35 @@ export function Analytics({ users, sales, expenses }: AnalyticsProps) {
       </div>
 
       {/* Comparison Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 md:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         <MetricCard 
-          label="Prev Month Total" 
-          value={currentMonthData.prevMonthTotalUsers} 
-          icon={Users}
-          color="blue"
-        />
-        <MetricCard 
-          label="New Users (Growth)" 
+          label="New Users" 
           value={currentMonthData.newUsers.length} 
           prevValue={prevMonthData.newUsers.length}
           icon={UserPlus}
           color="emerald"
         />
         <MetricCard 
-          label="Expired (Drop-off)" 
+          label="Renewals" 
+          value={currentMonthData.renewals.length} 
+          icon={RefreshCw}
+          color="blue"
+        />
+        <MetricCard 
+          label="Expired" 
           value={currentMonthData.expiredThisMonth.length} 
           icon={UserMinus}
           color="red"
         />
         <MetricCard 
-          label="Net Change" 
-          value={currentMonthData.netChange} 
-          icon={TrendingUp}
-          color="purple"
-          showSign
-        />
-        <MetricCard 
-          label="Current Active" 
+          label="Active Users" 
           value={currentMonthData.activeUsers} 
-          icon={RefreshCw}
-          color="orange"
+          icon={Users}
+          color="brand"
         />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         <MetricCard 
           label="Monthly Revenue" 
           value={`${currentMonthData.revenue.toLocaleString()} Ks`} 
@@ -317,18 +384,12 @@ export function Analytics({ users, sales, expenses }: AnalyticsProps) {
           color="purple"
           isCurrency
         />
-        <MetricCard 
-          label="Total Renewals" 
-          value={currentMonthData.renewals.length} 
-          icon={RefreshCw}
-          color="orange"
-        />
       </div>
 
       {/* Revenue Trend & Forecast */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
         {/* Revenue Trend */}
-        <div className="lg:col-span-2 clay-card p-6 md:p-8 border-none shadow-medium">
+        <div className="lg:col-span-2 clay-card p-6 md:p-8 border-none shadow-clay">
           <div className="flex items-center justify-between mb-8">
             <h3 className="text-lg font-bold text-brand-text">Revenue Trend (Last 6 Months)</h3>
             <div className="flex items-center gap-2 text-[10px] text-emerald-600 font-bold bg-emerald-500/10 px-3 py-1 rounded-full uppercase tracking-widest">
@@ -358,7 +419,7 @@ export function Analytics({ users, sales, expenses }: AnalyticsProps) {
         </div>
 
         {/* Sales Breakdown */}
-        <div className="clay-card p-6 md:p-8 border-none shadow-medium">
+        <div className="clay-card p-6 md:p-8 border-none shadow-clay">
           <h3 className="text-lg font-bold text-brand-text mb-8">Sales Breakdown</h3>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -386,7 +447,7 @@ export function Analytics({ users, sales, expenses }: AnalyticsProps) {
         </div>
 
         {/* Profit vs Expenses */}
-        <div className="lg:col-span-3 clay-card p-6 md:p-8 border-none shadow-medium">
+        <div className="lg:col-span-3 clay-card p-6 md:p-8 border-none shadow-clay">
           <div className="flex items-center justify-between mb-8">
             <h3 className="text-lg font-bold text-brand-text">Profit vs Expenses (Last 6 Months)</h3>
             <div className="flex items-center gap-2 text-[10px] text-brand-text-muted font-bold uppercase tracking-widest">
@@ -423,22 +484,22 @@ export function Analytics({ users, sales, expenses }: AnalyticsProps) {
         </div>
       </div>
 
-      {/* Churn Rate & Plan Distribution */}
+      {/* Expired Users Trend & Plan Distribution */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
-        {/* Churn Rate Trend */}
-        <div className="lg:col-span-2 clay-card p-6 md:p-8 border-none shadow-medium">
+        {/* Expired Users Trend */}
+        <div className="lg:col-span-2 clay-card p-6 md:p-8 border-none shadow-clay">
           <div className="flex items-center justify-between mb-8">
-            <h3 className="text-lg font-bold text-brand-text">User Churn Rate (%)</h3>
+            <h3 className="text-lg font-bold text-brand-text">Expired Users Trend</h3>
             <div className="flex items-center gap-2 text-[10px] text-brand-text-muted font-bold uppercase tracking-widest">
               Last 6 Months
             </div>
           </div>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={churnData}>
+              <LineChart data={expiredData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--color-brand-border)" vertical={false} />
                 <XAxis dataKey="name" stroke="var(--color-brand-text-muted)" fontSize={10} fontWeight={600} tickLine={false} axisLine={false} dy={10} />
-                <YAxis stroke="var(--color-brand-text-muted)" fontSize={10} fontWeight={600} tickLine={false} axisLine={false} dx={-10} tickFormatter={(v) => `${v}%`} />
+                <YAxis stroke="var(--color-brand-text-muted)" fontSize={10} fontWeight={600} tickLine={false} axisLine={false} dx={-10} tickFormatter={(v) => `${v}`} />
                 <Tooltip 
                   contentStyle={{ backgroundColor: 'var(--color-brand-card)', border: '1px solid var(--color-brand-border)', borderRadius: '12px', boxShadow: 'var(--shadow-medium)', padding: '10px' }}
                   itemStyle={{ fontSize: '11px', fontWeight: 600 }}
@@ -447,8 +508,8 @@ export function Analytics({ users, sales, expenses }: AnalyticsProps) {
                 <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }} />
                 <Line 
                   type="monotone" 
-                  dataKey="rate" 
-                  name="Churn Rate" 
+                  dataKey="expired" 
+                  name="Expired Users" 
                   stroke="#f43f5e" 
                   strokeWidth={4} 
                   dot={{ r: 6, fill: '#f43f5e', strokeWidth: 2, stroke: '#fff' }}
@@ -460,7 +521,7 @@ export function Analytics({ users, sales, expenses }: AnalyticsProps) {
         </div>
 
         {/* Plan Distribution */}
-        <div className="clay-card p-6 md:p-8 border-none shadow-medium">
+        <div className="clay-card p-6 md:p-8 border-none shadow-clay">
           <h3 className="text-lg font-bold text-brand-text mb-8">Plan Distribution (Active)</h3>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">

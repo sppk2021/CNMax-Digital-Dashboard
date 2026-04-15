@@ -9,11 +9,14 @@ interface UserDetailsModalProps {
   onClose: () => void;
   user: any;
   sales: any[];
+  plans: any[];
 }
 
-export function UserDetailsModal({ isOpen, onClose, user, sales }: UserDetailsModalProps) {
+export function UserDetailsModal({ isOpen, onClose, user, sales, plans }: UserDetailsModalProps) {
   const [showPassword, setShowPassword] = useState(false);
   if (!user) return null;
+
+  const userPlan = plans?.find(p => p.name === user.planName);
 
   const userSales = sales
     .filter(s => s.userId === user.id)
@@ -94,49 +97,52 @@ export function UserDetailsModal({ isOpen, onClose, user, sales }: UserDetailsMo
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="bg-white w-full max-w-2xl rounded-[2.5rem] border border-slate-100 overflow-hidden shadow-2xl"
+            className="clay-card w-full max-w-2xl border-none overflow-hidden shadow-clay bg-brand-card"
           >
             {/* Header */}
-            <div className="relative h-32 bg-gradient-to-r from-brand-sidebar/10 to-brand-blue/10 flex items-end p-8">
+            <div className="relative h-32 bg-brand-bg/50 border-b border-brand-border flex items-end p-8">
               <button 
                 onClick={onClose}
-                className="absolute top-6 right-6 p-2 bg-white/50 hover:bg-white/80 rounded-full transition-colors text-slate-600"
+                className="absolute top-6 right-6 p-2.5 bg-brand-bg/50 hover:bg-brand-bg rounded-xl transition-all text-brand-text-muted hover:text-brand-text border border-brand-border shadow-sm"
               >
                 <X className="w-5 h-5" />
               </button>
               <div className="flex items-center gap-4">
-                <div className="w-20 h-20 rounded-2xl bg-white border-4 border-white shadow-xl flex items-center justify-center text-3xl font-bold text-brand-sidebar">
+                <div className={cn(
+                  "w-20 h-20 rounded-2xl bg-brand-card border-4 border-brand-bg shadow-clay flex items-center justify-center text-3xl font-bold",
+                  status === 'Expired' ? "text-red-500" : "text-brand-primary"
+                )}>
                   {user.name.charAt(0)}
                 </div>
                 <div className="mb-2">
-                  <h2 className="text-2xl font-bold text-slate-800">{user.name}</h2>
-                  <p className="text-slate-500 text-sm font-medium">ID: {user.id}</p>
+                  <h2 className="text-2xl font-bold text-brand-text tracking-tight">{user.name}</h2>
+                  <p className="text-brand-text-muted text-[10px] font-bold uppercase tracking-widest">ID: {user.id}</p>
                 </div>
               </div>
             </div>
 
             <div className="p-8 space-y-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
-                  <div className="flex items-center gap-2 text-slate-400 text-xs uppercase tracking-widest font-bold mb-3">
+                <div className="bg-brand-bg/50 p-5 rounded-2xl border border-brand-border shadow-sm">
+                  <div className="flex items-center gap-2 text-brand-text-muted text-[10px] uppercase tracking-widest font-bold mb-3">
                     <User className="w-4 h-4" />
                     Status
                   </div>
                   <span className={cn(
-                    "inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border",
-                    status === 'Active' && "bg-emerald-100 text-emerald-600 border-emerald-200",
-                    status === 'Expired' && "bg-red-100 text-red-600 border-red-200",
-                    status === 'Upcoming' && "bg-blue-100 text-blue-600 border-blue-200"
+                    "inline-flex items-center px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-widest",
+                    status === 'Active' && "bg-emerald-500/10 text-emerald-600",
+                    status === 'Expired' && "bg-red-500 text-white shadow-lg shadow-red-500/40 animate-pulse",
+                    status === 'Upcoming' && "bg-blue-500/10 text-blue-600"
                   )}>
                     {status}
                   </span>
                 </div>
-                <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
-                  <div className="flex items-center gap-2 text-slate-400 text-xs uppercase tracking-widest font-bold mb-3">
+                <div className="bg-brand-bg/50 p-5 rounded-2xl border border-brand-border shadow-sm">
+                  <div className="flex items-center gap-2 text-brand-text-muted text-[10px] uppercase tracking-widest font-bold mb-3">
                     <Calendar className="w-4 h-4" />
                     Start Date
                   </div>
-                  <p className="text-slate-800 font-bold">
+                  <p className="text-brand-text font-bold">
                     {(() => {
                       if (!user.subscriptionStartDate) return 'N/A';
                       try {
@@ -147,28 +153,28 @@ export function UserDetailsModal({ isOpen, onClose, user, sales }: UserDetailsMo
                     })()}
                   </p>
                 </div>
-                <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
-                  <div className="flex items-center gap-2 text-slate-400 text-xs uppercase tracking-widest font-bold mb-3">
+                <div className="bg-brand-bg/50 p-5 rounded-2xl border border-brand-border shadow-sm">
+                  <div className="flex items-center gap-2 text-brand-text-muted text-[10px] uppercase tracking-widest font-bold mb-3">
                     <User className="w-4 h-4" />
                     Password
                   </div>
                   <div className="flex items-center gap-2">
-                    <p className="text-slate-800 font-bold">
+                    <p className="text-brand-text font-bold">
                       {showPassword ? (user.password || 'N/A') : '••••••••'}
                     </p>
-                    <button onClick={() => setShowPassword(!showPassword)} className="text-slate-400 hover:text-slate-600">
+                    <button onClick={() => setShowPassword(!showPassword)} className="text-brand-text-muted hover:text-brand-text transition-colors">
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
                 </div>
-                <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
-                  <div className="flex items-center gap-2 text-slate-400 text-xs uppercase tracking-widest font-bold mb-3">
+                <div className="bg-brand-bg/50 p-5 rounded-2xl border border-brand-border shadow-sm">
+                  <div className="flex items-center gap-2 text-brand-text-muted text-[10px] uppercase tracking-widest font-bold mb-3">
                     <Clock className="w-4 h-4" />
                     Expiry Date
                   </div>
                   <p className={cn(
                     "font-bold",
-                    status === 'Expired' ? "text-red-500" : "text-slate-800"
+                    status === 'Expired' ? "text-red-500" : "text-brand-text"
                   )}>
                     {(() => {
                       if (!user.expiryDate) return 'N/A';
@@ -180,28 +186,49 @@ export function UserDetailsModal({ isOpen, onClose, user, sales }: UserDetailsMo
                     })()}
                   </p>
                 </div>
+                <div className="bg-brand-bg/50 p-5 rounded-2xl border border-brand-border shadow-sm md:col-span-2">
+                  <div className="flex items-center gap-2 text-brand-text-muted text-[10px] uppercase tracking-widest font-bold mb-3">
+                    <DollarSign className="w-4 h-4" />
+                    Current Plan
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-brand-text font-bold text-lg">{user.planName || 'N/A'}</p>
+                      {userPlan && (
+                        <p className="text-brand-text-muted text-xs font-bold uppercase tracking-widest mt-1 opacity-70">{userPlan.durationDays} Days Duration</p>
+                      )}
+                    </div>
+                    {userPlan && (
+                      <div className="text-right">
+                        <p className="text-brand-primary font-bold text-xl">{userPlan.price.toLocaleString()} Ks</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
 
               {/* Sales History */}
               <div>
-                <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-                  <History className="w-5 h-5 text-brand-sidebar" />
+                <h3 className="text-lg font-bold text-brand-text mb-4 flex items-center gap-3">
+                  <div className="p-2 bg-brand-primary/10 rounded-xl">
+                    <History className="w-5 h-5 text-brand-primary" />
+                  </div>
                   Recent Sales History
                 </h3>
                 <div className="space-y-3 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
                   {userSales.length > 0 ? (
                     userSales.map((sale) => (
-                      <div key={sale.id} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all">
+                      <div key={sale.id} className="flex items-center justify-between p-4 bg-brand-bg/30 rounded-2xl border border-brand-border shadow-sm hover:shadow-md transition-all">
                         <div className="flex items-center gap-4">
                           <div className={cn(
-                            "w-12 h-12 rounded-xl flex items-center justify-center text-sm font-bold",
-                            sale.type === 'New' ? "bg-blue-50 text-blue-600" : "bg-brand-sidebar/10 text-brand-sidebar"
+                            "w-12 h-12 rounded-xl flex items-center justify-center text-sm font-bold shadow-inner",
+                            sale.type === 'New' ? "bg-emerald-500/10 text-emerald-600" : "bg-brand-primary/10 text-brand-primary"
                           )}>
                             {sale.type === 'New' ? 'N' : 'R'}
                           </div>
                           <div>
-                            <p className="font-bold text-slate-800">{sale.planName}</p>
-                            <p className="text-xs text-slate-500 font-medium mt-0.5">
+                            <p className="font-bold text-brand-text">{sale.planName}</p>
+                            <p className="text-[10px] text-brand-text-muted font-bold uppercase tracking-widest mt-0.5">
                               {sale.type} • {(() => {
                                 if (!sale.date) return 'N/A';
                                 try {
@@ -215,30 +242,30 @@ export function UserDetailsModal({ isOpen, onClose, user, sales }: UserDetailsMo
                         </div>
                         <div className="text-right">
                           <p className="font-bold text-emerald-600">+{sale.amount.toLocaleString()} Ks</p>
-                          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">{sale.id.slice(0, 8)}</p>
+                          <p className="text-[10px] text-brand-text-muted font-bold uppercase tracking-widest mt-1 opacity-50">{sale.id.slice(0, 8)}</p>
                         </div>
                       </div>
                     ))
                   ) : (
-                    <div className="text-center py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                      <DollarSign className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-                      <p className="text-slate-500 font-medium">No sales history found for this user.</p>
+                    <div className="text-center py-12 bg-brand-bg/30 rounded-2xl border border-dashed border-brand-border">
+                      <DollarSign className="w-10 h-10 text-brand-text-muted/20 mx-auto mb-3" />
+                      <p className="text-brand-text-muted font-bold text-sm">No sales history found for this user.</p>
                     </div>
                   )}
                 </div>
               </div>
             </div>
 
-            <div className="p-8 bg-slate-50 border-t border-slate-100 flex justify-end gap-4">
+            <div className="p-8 bg-brand-bg/50 border-t border-brand-border flex justify-end gap-4">
               <button
                 onClick={onClose}
-                className="px-6 py-3 bg-white hover:bg-slate-100 border border-slate-200 rounded-2xl text-slate-700 transition-colors font-bold"
+                className="clay-btn px-8 py-3 text-xs font-bold"
               >
                 Close
               </button>
               <button
                 onClick={exportToCSV}
-                className="flex items-center gap-2 px-6 py-3 bg-brand-sidebar hover:bg-brand-blue rounded-2xl text-white transition-all font-bold shadow-lg shadow-brand-sidebar/20"
+                className="clay-btn-primary flex items-center gap-2 px-8 py-3 text-xs font-bold shadow-lg shadow-brand-primary/20"
               >
                 <Download className="w-4 h-4" />
                 Export Report

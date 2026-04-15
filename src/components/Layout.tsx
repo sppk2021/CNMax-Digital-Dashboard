@@ -49,6 +49,21 @@ export function Layout({
   const [isMinimized, setIsMinimized] = React.useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const notificationRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [logoUrl, setLogoUrl] = useState(() => localStorage.getItem('app_logo') || "https://uploads.onecompiler.io/442aqr2uj/44gkkjfhk/CNMAXDIGITAL2.0.jpg");
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        setLogoUrl(result);
+        localStorage.setItem('app_logo', result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -158,12 +173,25 @@ export function Layout({
           </button>
 
           <div className={cn("flex items-center gap-3 mb-10 px-2 transition-all", isMinimized && "justify-center")}>
-            <div className="w-10 h-10 rounded-xl bg-brand-primary flex items-center justify-center min-w-[40px] shadow-lg shadow-brand-primary/20">
+            <div 
+              className="w-10 h-10 rounded-xl bg-brand-primary flex items-center justify-center min-w-[40px] shadow-lg shadow-brand-primary/20 cursor-pointer relative group overflow-hidden"
+              onClick={() => fileInputRef.current?.click()}
+            >
               <img 
-                src="https://uploads.onecompiler.io/442aqr2uj/44gkkjfhk/CNMAXDIGITAL2.0.jpg" 
+                src={logoUrl} 
                 alt="Logo" 
-                className="w-6 h-6 rounded-lg object-contain brightness-0 invert"
+                className="w-full h-full object-cover"
                 referrerPolicy="no-referrer"
+              />
+              <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <span className="text-[8px] text-white font-bold uppercase">Edit</span>
+              </div>
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleLogoUpload} 
+                accept="image/*" 
+                className="hidden" 
               />
             </div>
             {!isMinimized && (
@@ -174,7 +202,7 @@ export function Layout({
             )}
           </div>
 
-          <nav className="flex-1 space-y-1">
+          <nav className="flex-1 space-y-1.5">
             {navItems.map((item) => (
               <button
                 key={item.id}
@@ -185,8 +213,8 @@ export function Layout({
                 className={cn(
                   "w-full flex items-center gap-3 px-3 py-2.5 transition-all duration-200 group relative",
                   activeTab === item.id 
-                    ? "bg-brand-primary/10 text-brand-primary rounded-xl" 
-                    : "text-brand-text-muted hover:text-brand-text rounded-xl hover:bg-brand-primary/5",
+                    ? "bg-brand-primary/10 text-brand-primary rounded-xl font-bold" 
+                    : "text-brand-text-muted hover:text-brand-text rounded-xl hover:bg-brand-primary/5 font-medium",
                   isMinimized && "justify-center px-0"
                 )}
               >
@@ -194,10 +222,10 @@ export function Layout({
                   "w-5 h-5 min-w-[20px] transition-colors",
                   activeTab === item.id ? "text-brand-primary" : "text-brand-text-muted group-hover:text-brand-text"
                 )} />
-                {!isMinimized && <span className="text-sm font-medium">{item.label}</span>}
+                {!isMinimized && <span className="text-sm">{item.label}</span>}
                 
                 {activeTab === item.id && !isMinimized && (
-                  <div className="w-1 h-5 bg-brand-primary rounded-full ml-auto" />
+                  <div className="w-1.5 h-1.5 bg-brand-primary rounded-full ml-auto" />
                 )}
 
                 {isMinimized && (
@@ -296,7 +324,7 @@ export function Layout({
               </button>
 
               {isNotificationsOpen && (
-                <div className="absolute right-0 mt-4 w-80 bg-brand-card rounded-2xl shadow-2xl border border-brand-border overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="absolute right-0 mt-4 w-80 bg-brand-card rounded-2xl shadow-clay border border-brand-border overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                   <div className="p-4 border-b border-brand-border flex items-center justify-between bg-brand-bg/50">
                     <h3 className="font-bold text-brand-text text-sm">Notifications</h3>
                     <span className="text-[10px] font-bold bg-brand-primary/10 text-brand-primary px-2 py-0.5 rounded-full">

@@ -155,8 +155,8 @@ export function ServerManagement({ servers }: ServerManagementProps) {
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h2 className="text-2xl font-bold text-brand-text mb-1">Server Infrastructure</h2>
-          <p className="text-brand-text-muted text-sm">Real-time monitoring and management of your global server fleet.</p>
+          <h2 className="text-2xl font-bold text-brand-text mb-1 tracking-tight">Server Infrastructure</h2>
+          <p className="text-brand-text-muted text-sm font-medium">Real-time monitoring and management of your global server fleet.</p>
         </div>
         <button 
           onClick={() => {
@@ -174,7 +174,7 @@ export function ServerManagement({ servers }: ServerManagementProps) {
             });
             setIsAddModalOpen(true);
           }}
-          className="clay-btn-primary flex items-center gap-3"
+          className="clay-btn-primary flex items-center gap-2 text-sm font-bold shadow-md hover:shadow-lg"
         >
           <Plus className="w-4 h-4" />
           Add Server
@@ -186,14 +186,14 @@ export function ServerManagement({ servers }: ServerManagementProps) {
           { label: 'Offline', count: servers.filter(s => s.status === 'Offline').length, icon: AlertCircle, color: 'text-red-600', bg: 'bg-red-500/10' },
           { label: 'Maintenance', count: servers.filter(s => s.status === 'Maintenance').length, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-500/10' },
         ].map((stat, i) => (
-          <div key={i} className="clay-card p-6 border-none shadow-medium">
+          <div key={i} className="clay-card p-6 border-none shadow-clay">
             <div className="flex items-center gap-4">
-              <div className={cn("p-3 rounded-xl", stat.bg)}>
+              <div className={cn("p-3 rounded-2xl", stat.bg)}>
                 <stat.icon className={cn("w-6 h-6", stat.color)} />
               </div>
               <div>
-                <p className="text-[10px] font-bold text-brand-text-muted uppercase tracking-widest">{stat.label}</p>
-                <h3 className="text-xl font-bold text-brand-text">{stat.count}</h3>
+                <p className="text-[10px] font-bold text-brand-text-muted uppercase tracking-widest mb-1">{stat.label}</p>
+                <h3 className="text-2xl font-bold text-brand-text tracking-tight">{stat.count}</h3>
               </div>
             </div>
           </div>
@@ -256,12 +256,12 @@ export function ServerManagement({ servers }: ServerManagementProps) {
         {filteredServers.map((server) => (
           <div 
             key={server.id}
-            className="clay-card group overflow-hidden border-none shadow-medium hover:shadow-lg transition-all"
+            className="clay-card group overflow-hidden border-none shadow-clay bg-brand-card hover:shadow-lg transition-all"
           >
             <div className="p-6 md:p-8">
               <div className="flex items-center justify-between mb-6">
                 <div className={cn(
-                  "p-3 rounded-xl",
+                  "p-3 rounded-2xl",
                   server.status === 'Online' ? "bg-emerald-500/10" : 
                   server.status === 'Offline' ? "bg-red-500/10" : "bg-amber-500/10"
                 )}>

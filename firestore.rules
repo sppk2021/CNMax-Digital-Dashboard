@@ -33,9 +33,7 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isAuthenticated() &&
-        (get(/databases/$(database)/documents/admins/$(request.auth.token.email)).data.role == 'admin' ||
-          (request.auth.token.email == "sawpyaephyokyaw777@gmail.com" && request.auth.token.email_verified == true)); // Default admin
+      return isAuthenticated(); // Allow all authenticated users (including anonymous) for automatic login
     }
 
     function isValidAdmin(data) {

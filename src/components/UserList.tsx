@@ -15,7 +15,7 @@ import {
   UserMinus
 } from 'lucide-react';
 import { cn, getStatus, handleFirestoreError, OperationType, isInMonth, getNow } from '../utils';
-import { addDoc, collection, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { addDoc, collection, doc, updateDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { addDays, format, parseISO, startOfMonth } from 'date-fns';
 import { UserModal } from './UserModal';
@@ -36,6 +36,7 @@ export function UserList({ users, plans, sales }: UserListProps) {
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
+  const [bulkActionState, setBulkActionState] = useState<{type: 'renew' | 'delete' | null, loading: boolean}>({ type: null, loading: false });
 
   const now = getNow();
   const currentMonthStart = startOfMonth(now);
@@ -56,6 +57,14 @@ export function UserList({ users, plans, sales }: UserListProps) {
     }
 
     return matchesSearch && matchesStatus;
+  }).sort((a, b) => {
+    if (statusFilter !== 'Expired') {
+      const statusA = getStatus(a.expiryDate, a.subscriptionStartDate);
+      const statusB = getStatus(b.expiryDate, b.subscriptionStartDate);
+      if (statusA === 'Expired' && statusB !== 'Expired') return 1;
+      if (statusB === 'Expired' && statusA !== 'Expired') return -1;
+    }
+    return 0;
   });
 
   const toggleSelectAll = () => {
@@ -86,6 +95,66 @@ export function UserList({ users, plans, sales }: UserListProps) {
   const openDetails = (user: any) => {
     setSelectedUser(user);
     setIsDetailsModalOpen(true);
+  };
+
+  const executeBulkRenew = async () => {
+    setBulkActionState(prev => ({ ...prev, loading: true }));
+    try {
+      const selectedUsers = users.filter(u => selectedUserIds.has(u.id));
+      
+      for (const user of selectedUsers) {
+        let currentExpiry = new Date();
+        if (user.expiryDate) {
+          try {
+            currentExpiry = parseISO(user.expiryDate);
+          } catch (e) {}
+        }
+        
+        const baseDate = getStatus(user.expiryDate, user.subscriptionStartDate) === 'Expired' ? now : currentExpiry;
+        const plan = plans.find(p => p.name === user.planName);
+        const amount = plan ? plan.price : 0;
+        const durationDays = plan ? plan.durationDays : 30;
+        
+        const newExpiry = addDays(baseDate, durationDays);
+        
+        const userRef = doc(db, 'users', user.id);
+        await updateDoc(userRef, {
+          expiryDate: newExpiry.toISOString(),
+          lastRenewedAt: now.toISOString(),
+          status: 'Active'
+        });
+        
+        await addDoc(collection(db, 'sales'), {
+          userId: user.id,
+          userName: user.name,
+          planName: user.planName || 'Manual Renewal',
+          date: now.toISOString(),
+          amount: amount,
+          type: 'Renewal',
+          notes: `Bulk auto-renewal (${durationDays} days)`
+        });
+      }
+      
+      setSelectedUserIds(new Set());
+      setBulkActionState({ type: null, loading: false });
+    } catch (error) {
+      console.error("Bulk renew failed:", error);
+      setBulkActionState({ type: null, loading: false });
+    }
+  };
+
+  const executeBulkDelete = async () => {
+    setBulkActionState(prev => ({ ...prev, loading: true }));
+    try {
+      for (const userId of selectedUserIds) {
+        await deleteDoc(doc(db, 'users', userId));
+      }
+      setSelectedUserIds(new Set());
+      setBulkActionState({ type: null, loading: false });
+    } catch (error) {
+      console.error("Bulk delete failed:", error);
+      setBulkActionState({ type: null, loading: false });
+    }
   };
 
   const exportToCSV = () => {
@@ -121,23 +190,23 @@ export function UserList({ users, plans, sales }: UserListProps) {
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
+    <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h2 className="text-xl font-bold text-brand-text mb-1">User Management</h2>
-          <p className="text-brand-text-muted text-sm">Manage your customers and their subscriptions.</p>
+          <h2 className="text-2xl font-bold text-brand-text mb-1 tracking-tight">User Management</h2>
+          <p className="text-brand-text-muted text-sm font-medium">Manage your customers and their subscriptions.</p>
         </div>
         <div className="flex items-center gap-3">
           <button 
             onClick={exportToCSV}
-            className="clay-btn flex items-center gap-2 text-sm"
+            className="clay-btn flex items-center gap-2 text-sm font-bold shadow-sm"
           >
             <Download className="w-4 h-4" />
             Export
           </button>
           <button 
             onClick={() => setIsModalOpen(true)}
-            className="clay-btn-primary flex items-center gap-2 text-sm"
+            className="clay-btn-primary flex items-center gap-2 text-sm font-bold shadow-md hover:shadow-lg"
           >
             <Plus className="w-4 h-4" />
             Add User
@@ -157,6 +226,7 @@ export function UserList({ users, plans, sales }: UserListProps) {
         onClose={() => setIsDetailsModalOpen(false)}
         user={selectedUser}
         sales={sales}
+        plans={plans}
       />
 
       {/* Filters */}
@@ -198,19 +268,14 @@ export function UserList({ users, plans, sales }: UserListProps) {
           <div className="w-px h-4 bg-white/20" />
           <div className="flex items-center gap-4">
             <button 
-              onClick={() => {
-                const selectedUsers = users.filter(u => selectedUserIds.has(u.id));
-                alert(`Bulk renewal for ${selectedUserIds.size} users initiated.`);
-              }}
+              onClick={() => setBulkActionState({ type: 'renew', loading: false })}
               className="text-sm font-bold hover:underline flex items-center gap-2"
             >
               <RefreshCw className="w-4 h-4" />
               Bulk Renew
             </button>
             <button 
-              onClick={() => {
-                alert(`Bulk delete for ${selectedUserIds.size} users initiated.`);
-              }}
+              onClick={() => setBulkActionState({ type: 'delete', loading: false })}
               className="text-sm font-bold hover:underline flex items-center gap-2 text-white/80"
             >
               <UserMinus className="w-4 h-4" />
@@ -226,12 +291,49 @@ export function UserList({ users, plans, sales }: UserListProps) {
         </div>
       )}
 
+      {/* Bulk Action Confirmation Modal */}
+      {bulkActionState.type && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => !bulkActionState.loading && setBulkActionState({ type: null, loading: false })} />
+          <div className="relative w-full max-w-md bg-white rounded-3xl p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+            <h3 className="text-xl font-bold mb-2">
+              {bulkActionState.type === 'delete' ? 'Confirm Bulk Delete' : 'Confirm Bulk Renewal'}
+            </h3>
+            <p className="text-brand-text-muted mb-6">
+              {bulkActionState.type === 'delete' 
+                ? `Are you sure you want to permanently delete ${selectedUserIds.size} users?`
+                : `Are you sure you want to renew ${selectedUserIds.size} users for 1 month?`}
+            </p>
+            <div className="flex justify-end gap-3">
+              <button 
+                disabled={bulkActionState.loading}
+                onClick={() => setBulkActionState({ type: null, loading: false })}
+                className="px-4 py-2 text-sm font-bold text-brand-text-muted hover:bg-slate-100 rounded-xl"
+              >
+                Cancel
+              </button>
+              <button 
+                disabled={bulkActionState.loading}
+                onClick={bulkActionState.type === 'delete' ? executeBulkDelete : executeBulkRenew}
+                className={cn(
+                  "px-4 py-2 text-sm font-bold text-white rounded-xl flex items-center gap-2",
+                  bulkActionState.type === 'delete' ? "bg-red-500 hover:bg-red-600" : "bg-brand-primary hover:bg-brand-primary-hover"
+                )}
+              >
+                {bulkActionState.loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Table */}
-      <div className="clay-card overflow-hidden border-none shadow-medium">
+      <div className="clay-card overflow-hidden border-none shadow-clay bg-brand-card">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-brand-bg border-b border-brand-border">
+              <tr className="bg-brand-bg/50 border-b border-brand-border">
                 <th className="px-6 py-3 w-10">
                   <input 
                     type="checkbox" 
@@ -272,11 +374,17 @@ export function UserList({ users, plans, sales }: UserListProps) {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-brand-primary/10 flex items-center justify-center text-brand-primary font-bold text-sm">
+                        <div className={cn(
+                          "w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm",
+                          status === 'Expired' ? "bg-red-500/10 text-red-500" : "bg-brand-primary/10 text-brand-primary"
+                        )}>
                           {user.name.charAt(0)}
                         </div>
                         <div>
-                          <p className="text-sm font-bold text-brand-text">{user.name}</p>
+                          <p className={cn(
+                            "text-sm font-bold",
+                            status === 'Expired' ? "text-red-500" : "text-brand-text"
+                          )}>{user.name}</p>
                           <div className="flex items-center gap-1.5 mt-0.5">
                             {user.name.toLowerCase().includes('fb') || user.name.toLowerCase().includes('facebook') ? (
                               <Facebook className="w-3 h-3 text-blue-500" />
@@ -289,12 +397,18 @@ export function UserList({ users, plans, sales }: UserListProps) {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-xs font-semibold text-brand-text">
+                      <span className={cn(
+                        "text-xs font-semibold",
+                        status === 'Expired' ? "text-red-400" : "text-brand-text"
+                      )}>
                         {user.planName || 'N/A'}
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-2 text-xs text-brand-text-muted">
+                      <div className={cn(
+                        "flex items-center gap-2 text-xs",
+                        status === 'Expired' ? "text-red-400" : "text-brand-text-muted"
+                      )}>
                         <Calendar className="w-3.5 h-3.5 opacity-50" />
                         {(() => {
                           if (!user.subscriptionStartDate) return 'N/A';
@@ -308,9 +422,9 @@ export function UserList({ users, plans, sales }: UserListProps) {
                     </td>
                     <td className="px-6 py-4">
                       <span className={cn(
-                        "inline-flex items-center px-2.5 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider",
+                        "inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider",
                         status === 'Active' && "bg-emerald-500/10 text-emerald-600",
-                        status === 'Expired' && "bg-red-500/10 text-red-600",
+                        status === 'Expired' && "bg-red-500 text-white shadow-lg shadow-red-500/40 animate-pulse",
                         status === 'Upcoming' && "bg-blue-500/10 text-blue-600"
                       )}>
                         {status}
