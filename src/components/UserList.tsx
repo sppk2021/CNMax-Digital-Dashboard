@@ -12,7 +12,10 @@ import {
   Loader2,
   Users,
   X,
-  UserMinus
+  UserMinus,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 import { cn, getStatus, handleFirestoreError, OperationType, isInMonth, getNow } from '../utils';
 import { addDoc, collection, doc, updateDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
@@ -32,6 +35,7 @@ interface UserListProps {
 export function UserList({ users, plans, sales }: UserListProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'All' | 'Active' | 'Expired' | 'Upcoming' | 'New This Month' | 'Renewed This Month'>('All');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isRenewalModalOpen, setIsRenewalModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
@@ -62,6 +66,14 @@ export function UserList({ users, plans, sales }: UserListProps) {
 
     return matchesSearch && matchesStatus;
   }).sort((a, b) => {
+    // If explicit sort order is set for expiry date
+    if (sortOrder) {
+      const dateA = a.expiryDate ? parseISO(a.expiryDate).getTime() : 0;
+      const dateB = b.expiryDate ? parseISO(b.expiryDate).getTime() : 0;
+      return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+    }
+
+    // Default sorting: Expired users at the bottom if not filtering by Expired
     if (statusFilter !== 'Expired') {
       const statusA = getStatus(a.expiryDate, a.subscriptionStartDate);
       const statusB = getStatus(b.expiryDate, b.subscriptionStartDate);
@@ -70,6 +82,12 @@ export function UserList({ users, plans, sales }: UserListProps) {
     }
     return 0;
   });
+
+  const toggleSort = () => {
+    if (sortOrder === null) setSortOrder('asc');
+    else if (sortOrder === 'asc') setSortOrder('desc');
+    else setSortOrder(null);
+  };
 
   const toggleSelectAll = () => {
     if (selectedUserIds.size === filteredUsers.length) {
@@ -268,6 +286,19 @@ export function UserList({ users, plans, sales }: UserListProps) {
               </button>
             ))}
           </div>
+          
+          <button
+            onClick={toggleSort}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all border",
+              sortOrder 
+                ? "bg-brand-primary text-white border-brand-primary shadow-lg shadow-brand-primary/20" 
+                : "bg-brand-bg text-brand-text-muted border-brand-border hover:border-brand-primary/50"
+            )}
+          >
+            {sortOrder === 'asc' ? <ArrowUp className="w-4 h-4" /> : sortOrder === 'desc' ? <ArrowDown className="w-4 h-4" /> : <ArrowUpDown className="w-4 h-4" />}
+            Sort Expiry
+          </button>
         </div>
       </div>
 
@@ -364,7 +395,17 @@ export function UserList({ users, plans, sales }: UserListProps) {
                 <th className="px-6 py-3 text-[10px] font-bold text-brand-text-muted uppercase tracking-widest">Plan</th>
                 <th className="px-6 py-3 text-[10px] font-bold text-brand-text-muted uppercase tracking-widest">Subscription</th>
                 <th className="px-6 py-3 text-[10px] font-bold text-brand-text-muted uppercase tracking-widest">Status</th>
-                <th className="px-6 py-3 text-[10px] font-bold text-brand-text-muted uppercase tracking-widest">Expiry</th>
+                <th 
+                  className="px-6 py-3 text-[10px] font-bold text-brand-text-muted uppercase tracking-widest cursor-pointer hover:text-brand-primary transition-colors group"
+                  onClick={toggleSort}
+                >
+                  <div className="flex items-center gap-1">
+                    Expiry
+                    {sortOrder === 'asc' && <ArrowUp className="w-3 h-3" />}
+                    {sortOrder === 'desc' && <ArrowDown className="w-3 h-3" />}
+                    {!sortOrder && <ArrowUpDown className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />}
+                  </div>
+                </th>
                 <th className="px-6 py-3 text-[10px] font-bold text-brand-text-muted uppercase tracking-widest text-right">Actions</th>
               </tr>
             </thead>
