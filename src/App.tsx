@@ -164,14 +164,29 @@ export default function App() {
     const expensesQuery = query(collection(db, 'expenses'), orderBy('date', 'desc'));
     const serversQuery = query(collection(db, 'servers'), orderBy('createdAt', 'desc'));
 
+    const SEED_NAMES = [
+      'Aung Aung', 'Kyaw Kyaw', 'Mya Mya', 'Hla Hla', 'Zaw Zaw', 
+      'Thida', 'Phyu Phyu', 'Wai Yan', 'Min Min', 'Su Su',
+      'Tun Tun', 'Aye Aye', 'Nilar', 'Zarni', 'Thet Thet',
+      'Ko Ko', 'Ma Ma', 'Bo Bo', 'Lin Lin', 'Nan Nan',
+      'Facebook User', 'Messenger Client', 'Viber User', 'Telegram User',
+      'Premium Client', 'VIP User', 'Business Partner', 'Regular User'
+    ];
+
     const unsubscribeUsers = onSnapshot(usersQuery, (snapshot) => {
-      setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      const allUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+      // Filter out seed users if they were created as part of a seed run
+      const filtered = allUsers.filter(u => !u.isSample && !SEED_NAMES.some(name => u.name?.startsWith(name)));
+      setUsers(filtered);
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'users');
     });
 
     const unsubscribeSales = onSnapshot(salesQuery, (snapshot) => {
-      setSales(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      const allSales = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+      // Filter out seed sales
+      const filtered = allSales.filter(s => !s.isSample && !SEED_NAMES.some(name => s.userName?.startsWith(name)));
+      setSales(filtered);
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'sales');
     });
@@ -183,7 +198,9 @@ export default function App() {
     });
 
     const unsubscribeExpenses = onSnapshot(expensesQuery, (snapshot) => {
-      setExpenses(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      const allExpenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+      const filtered = allExpenses.filter(e => !e.isSample);
+      setExpenses(filtered);
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'expenses');
     });

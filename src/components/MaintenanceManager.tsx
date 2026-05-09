@@ -13,13 +13,16 @@ export function MaintenanceManager({ users, sales }: MaintenanceManagerProps) {
   useEffect(() => {
     const runMaintenance = async () => {
       const now = getNow();
+      const inFlight = new Set<string>();
       
       for (const user of users) {
+        if (inFlight.has(user.id)) continue;
         const currentStatus = getStatus(user.expiryDate, user.subscriptionStartDate);
         
         // If user is expired according to logic but active in Firestore
         if (currentStatus === 'Expired' && user.status === 'Active') {
           try {
+            inFlight.add(user.id);
             // 1. Update user status in Firestore
             const userRef = doc(db, 'users', user.id);
             await updateDoc(userRef, {

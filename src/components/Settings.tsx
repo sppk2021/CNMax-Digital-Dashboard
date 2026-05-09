@@ -10,12 +10,13 @@ import {
   CheckCircle2,
   Lock,
   AlertTriangle,
-  Loader2
+  Loader2,
+  Download
 } from 'lucide-react';
 import { collection, onSnapshot, query, doc, setDoc, deleteDoc, serverTimestamp, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
-import { cn, handleFirestoreError, OperationType } from '../utils';
-import { format } from 'date-fns';
+import { cn, handleFirestoreError, OperationType, safeFormat } from '../utils';
+import { format, parseISO } from 'date-fns';
 import { clearAllData, seedSampleData } from '../utils/seedData';
 
 import { toast } from 'react-hot-toast';
@@ -121,6 +122,56 @@ export function Settings({ currentUser, users, plans, servers, sales, expenses }
     }
   };
 
+  const handleExportUsers = () => {
+    if (users.length === 0) {
+      toast.error('No users to export');
+      return;
+    }
+
+    const headers = [
+      'Name',
+      'Email',
+      'Phone',
+      'Plan',
+      'Start Date',
+      'Expiry Date',
+      'Status',
+      'Last Renewed',
+      'Notes',
+      'Created At'
+    ];
+
+    const csvContent = [
+      headers.join(','),
+      ...users.map(u => {
+        const row = [
+          `"${(u.name || '').replace(/"/g, '""')}"`,
+          `"${(u.email || '').replace(/"/g, '""')}"`,
+          `"${(u.phone || '').replace(/"/g, '""')}"`,
+          `"${(u.planName || '').replace(/"/g, '""')}"`,
+          safeFormat(u.subscriptionStartDate, 'yyyy-MM-dd'),
+          safeFormat(u.expiryDate, 'yyyy-MM-dd'),
+          u.status || 'Unknown',
+          safeFormat(u.lastRenewedAt, 'yyyy-MM-dd HH:mm'),
+          `"${(u.notes || '').replace(/"/g, '""')}"`,
+          safeFormat(u.createdAt, 'yyyy-MM-dd HH:mm')
+        ];
+        return row.join(',');
+      })
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `all_users_export_${format(new Date(), 'yyyy-MM-dd')}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success('User data exported successfully');
+  };
+
   const filteredAdmins = admins.filter(a => 
     (a.username || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -140,13 +191,22 @@ export function Settings({ currentUser, users, plans, servers, sales, expenses }
             </div>
           </div>
           
-          <button 
-            onClick={() => setIsAddingAdmin(true)}
-            className="clay-btn-primary flex items-center gap-2 px-6 py-3 text-sm"
-          >
-            <Plus className="w-4 h-4" />
-            Add User
-          </button>
+          <div className="flex flex-wrap gap-3">
+            <button 
+              onClick={handleExportUsers}
+              className="clay-btn flex items-center gap-2 px-6 py-3 text-sm border-brand-primary/20 text-brand-primary"
+            >
+              <Download className="w-4 h-4" />
+              Export CSV
+            </button>
+            <button 
+              onClick={() => setIsAddingAdmin(true)}
+              className="clay-btn-primary flex items-center gap-2 px-6 py-3 text-sm"
+            >
+              <Plus className="w-4 h-4" />
+              Add User
+            </button>
+          </div>
         </div>
 
         {isAddingAdmin && (
@@ -222,7 +282,7 @@ export function Settings({ currentUser, users, plans, servers, sales, expenses }
                   <td className="px-6 py-5">
                     <div className="flex items-center gap-2.5 text-xs font-bold text-brand-text-muted">
                       <Calendar className="w-4 h-4 opacity-40" />
-                      {admin.createdAt ? format(admin.createdAt.toDate(), 'MMM d, yyyy') : 'N/A'}
+                      {safeFormat(admin.createdAt, 'MMM d, yyyy')}
                     </div>
                   </td>
                   <td className="px-6 py-5 text-right">

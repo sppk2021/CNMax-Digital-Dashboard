@@ -13,7 +13,7 @@ import {
   FileText,
   Tag
 } from 'lucide-react';
-import { cn } from '../utils';
+import { cn, safeFormat } from '../utils';
 import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 
 interface SaleListProps {
@@ -41,11 +41,16 @@ export function SaleList({ sales }: SaleListProps) {
   }, [sales]);
 
   const filteredSales = useMemo(() => {
-    return sales.filter(sale => {
+    // Deduplicate sales by ID to handle any race conditions in logging
+    const uniqueSales = Array.from(new Map(sales.map(s => [s.id, s])).values());
+
+    return uniqueSales.filter(sale => {
       const userName = sale.userName || '';
       const search = (searchTerm || '').toLowerCase();
       const matchesSearch = userName.toLowerCase().includes(search);
-      const matchesType = typeFilter === 'All' || sale.type === typeFilter;
+      const matchesType = typeFilter === 'All' 
+        ? (sale.type === 'New' || sale.type === 'Renewal') 
+        : sale.type === typeFilter;
       
       let matchesDate = true;
       if (sale.date) {
@@ -76,19 +81,24 @@ export function SaleList({ sales }: SaleListProps) {
     });
   }, [sales, searchTerm, typeFilter, startDate, endDate, selectedMonth]);
 
-  const totalRevenue = filteredSales.reduce((acc, s) => acc + s.amount, 0);
-  const overallTotalRevenue = sales.reduce((acc, s) => acc + s.amount, 0);
+  const totalRevenue = filteredSales
+    .filter(s => s.type === 'New' || s.type === 'Renewal')
+    .reduce((acc, s) => acc + Number(s.amount || 0), 0);
+    
+  const overallTotalRevenue = sales
+    .filter(s => s.type === 'New' || s.type === 'Renewal')
+    .reduce((acc, s) => acc + Number(s.amount || 0), 0);
 
   const monthlyBreakdown = useMemo(() => {
     const breakdown: Record<string, { total: number, count: number }> = {};
     filteredSales.forEach(sale => {
-      if (sale.date && sale.amount) {
+      if (sale.date && (sale.type === 'New' || sale.type === 'Renewal')) {
         try {
           const monthKey = format(parseISO(sale.date), 'yyyy-MM');
           if (!breakdown[monthKey]) {
             breakdown[monthKey] = { total: 0, count: 0 };
           }
-          breakdown[monthKey].total += sale.amount;
+          breakdown[monthKey].total += (sale.amount || 0);
           breakdown[monthKey].count += 1;
         } catch (e) {}
       }
@@ -106,8 +116,8 @@ export function SaleList({ sales }: SaleListProps) {
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h2 className="text-2xl font-bold text-brand-text mb-1 tracking-tight">Events & Sales History</h2>
-          <p className="text-brand-text-muted text-sm font-medium">Track all transactions and subscription lifecycle events.</p>
+          <h2 className="text-2xl font-bold text-brand-text mb-1 tracking-tight">Sales & Subscription History</h2>
+          <p className="text-brand-text-muted text-sm font-medium">Detailed tracking of all new sales, renewals, and lifecycle events.</p>
         </div>
         <div className="flex flex-wrap gap-4">
           <div className="clay-card px-5 py-3 flex items-center gap-4 border-none shadow-clay bg-brand-card">
@@ -115,7 +125,7 @@ export function SaleList({ sales }: SaleListProps) {
               <CircleDollarSign className="w-5 h-5 text-blue-500" />
             </div>
             <div>
-              <p className="text-[10px] text-brand-text-muted font-bold uppercase tracking-widest mb-0.5">Overall Total Sales</p>
+              <p className="text-[10px] text-brand-text-muted font-bold uppercase tracking-widest mb-0.5">Grand Total (All Time)</p>
               <p className="text-xl font-bold text-brand-text tracking-tight">{overallTotalRevenue.toLocaleString()} Ks</p>
             </div>
           </div>
@@ -124,7 +134,7 @@ export function SaleList({ sales }: SaleListProps) {
               <Filter className="w-5 h-5 text-emerald-500" />
             </div>
             <div>
-              <p className="text-[10px] text-brand-text-muted font-bold uppercase tracking-widest mb-0.5">Filtered Revenue</p>
+              <p className="text-[10px] text-brand-text-muted font-bold uppercase tracking-widest mb-0.5">Filtered Total</p>
               <p className="text-xl font-bold text-brand-text tracking-tight">{totalRevenue.toLocaleString()} Ks</p>
             </div>
           </div>
@@ -156,7 +166,7 @@ export function SaleList({ sales }: SaleListProps) {
                     : "text-brand-text-muted hover:text-brand-text hover:bg-brand-primary/5"
                 )}
               >
-                {f}
+                {f === 'All' ? 'All Sales' : f}
               </button>
             ))}
           </div>
@@ -221,7 +231,7 @@ export function SaleList({ sales }: SaleListProps) {
                 <p className="text-xl font-bold text-brand-text tracking-tight">{mb.total.toLocaleString()} Ks</p>
                 <p className="text-[10px] text-brand-text-muted font-medium mt-1.5 flex items-center gap-1.5">
                   <span className="w-1 h-1 rounded-full bg-brand-primary"></span>
-                  {mb.count} transactions
+                  {mb.count} sales
                 </p>
               </div>
             ))}
@@ -260,14 +270,7 @@ export function SaleList({ sales }: SaleListProps) {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2 text-xs text-brand-text-muted">
                       <Calendar className="w-3.5 h-3.5 opacity-50" />
-                      {(() => {
-                        if (!sale.date) return 'N/A';
-                        try {
-                          return format(parseISO(sale.date), 'MMM d, yyyy HH:mm');
-                        } catch(e) {
-                          return 'Invalid Date';
-                        }
-                      })()}
+                      {safeFormat(sale.date, 'MMM d, yyyy HH:mm')}
                     </div>
                   </td>
                   <td className="px-6 py-4">
@@ -377,14 +380,7 @@ export function SaleList({ sales }: SaleListProps) {
                   <div>
                     <p className="text-[10px] font-bold text-brand-text-muted uppercase tracking-widest">Date & Time</p>
                     <p className="text-sm font-bold text-brand-text">
-                      {(() => {
-                        if (!selectedSale.date) return 'N/A';
-                        try {
-                          return format(parseISO(selectedSale.date), 'MMMM d, yyyy HH:mm');
-                        } catch(e) {
-                          return 'Invalid Date';
-                        }
-                      })()}
+                      {safeFormat(selectedSale.date, 'MMMM d, yyyy HH:mm')}
                     </p>
                   </div>
                 </div>

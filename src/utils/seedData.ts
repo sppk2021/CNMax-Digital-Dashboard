@@ -119,19 +119,20 @@ export const seedSampleData = async () => {
             amount: planPrice, // Full amount recorded in the month of purchase
             date: saleDate.toISOString(),
             type: 'New',
-            planName: planName
+            planName: planName,
+            isSample: true
           });
         }
       } else {
-        // SUBSEQUENT MONTHS (Feb onwards)
-        
+        // ... (previous lines)
         // 1. Handle Expirations (10 users expire every month)
         // We take 10 users who are due to expire and mark them as expired
         const expiredThisMonth = activeUsers.splice(0, 10);
         for (const user of expiredThisMonth) {
           await updateDoc(doc(db, 'users', user.id), { 
             status: 'Expired',
-            expiryDate: monthDate.toISOString() 
+            expiryDate: monthDate.toISOString(),
+            isSample: true
           });
         }
 
@@ -151,7 +152,8 @@ export const seedSampleData = async () => {
             await updateDoc(doc(db, 'users', user.id), {
               expiryDate: newExpiry,
               lastRenewedAt: monthDate.toISOString(),
-              status: 'Active'
+              status: 'Active',
+              isSample: true
             });
             user.expiryDate = newExpiry; // update local state for next month's loop
 
@@ -161,7 +163,8 @@ export const seedSampleData = async () => {
               amount: planPrice,
               date: saleDate.toISOString(),
               type: 'Renewal',
-              planName: user.planName
+              planName: user.planName,
+              isSample: true
             });
           }
         }
@@ -174,7 +177,8 @@ export const seedSampleData = async () => {
             expiryDate: addDays(monthDate, 30).toISOString(),
             subscriptionStartDate: monthDate.toISOString(),
             status: 'Active',
-            planName: '1 Month'
+            planName: '1 Month',
+            isSample: true
           };
           const docRef = await addDoc(collection(db, 'users'), user);
           activeUsers.push({ id: docRef.id, ...user });
@@ -185,7 +189,8 @@ export const seedSampleData = async () => {
             amount: 5000,
             date: saleDate.toISOString(),
             type: 'New',
-            planName: '1 Month'
+            planName: '1 Month',
+            isSample: true
           });
         }
       }
@@ -200,7 +205,8 @@ export const seedSampleData = async () => {
         category: expenseCategories[m % expenseCategories.length],
         amount: 25000 + (Math.random() * 10000),
         date: monthDate.toISOString(),
-        description: `Monthly ${expenseCategories[m % expenseCategories.length]}`
+        description: `Monthly ${expenseCategories[m % expenseCategories.length]}`,
+        isSample: true
       });
     }
 

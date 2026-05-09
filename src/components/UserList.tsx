@@ -17,7 +17,7 @@ import {
   ArrowUp,
   ArrowDown
 } from 'lucide-react';
-import { cn, getStatus, handleFirestoreError, OperationType, isInMonth, getNow } from '../utils';
+import { cn, getStatus, handleFirestoreError, OperationType, isInMonth, getNow, safeFormat } from '../utils';
 import { addDoc, collection, doc, updateDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { addDays, format, parseISO, startOfMonth } from 'date-fns';
@@ -478,14 +478,7 @@ export function UserList({ users, plans, sales }: UserListProps) {
                         status === 'Expired' ? "text-red-400" : "text-brand-text-muted"
                       )}>
                         <Calendar className="w-3.5 h-3.5 opacity-50" />
-                        {(() => {
-                          if (!user.subscriptionStartDate) return 'N/A';
-                          try {
-                            return format(parseISO(user.subscriptionStartDate), 'MMM d, yyyy');
-                          } catch (e) {
-                            return 'Invalid Date';
-                          }
-                        })()}
+                        {safeFormat(user.subscriptionStartDate, 'MMM d, yyyy')}
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -503,14 +496,7 @@ export function UserList({ users, plans, sales }: UserListProps) {
                         "text-xs font-bold",
                         status === 'Expired' ? "text-red-500" : "text-brand-text"
                       )}>
-                        {(() => {
-                          if (!user.expiryDate) return 'N/A';
-                          try {
-                            return format(parseISO(user.expiryDate), 'MMM d, yyyy');
-                          } catch (e) {
-                            return 'Invalid Date';
-                          }
-                        })()}
+                        {safeFormat(user.expiryDate, 'MMM d, yyyy')}
                       </p>
                     </td>
                     <td className="px-6 py-4 text-right">
@@ -651,7 +637,7 @@ export function UserList({ users, plans, sales }: UserListProps) {
                       "text-xs font-bold",
                       status === 'Expired' ? "text-red-500" : "text-brand-text"
                     )}>
-                      {user.expiryDate ? format(parseISO(user.expiryDate), 'MMM d, yyyy') : 'N/A'}
+                      {safeFormat(user.expiryDate, 'MMM d, yyyy')}
                     </p>
                   </div>
                 </div>

@@ -18,7 +18,7 @@ export function UserDetailsModal({ isOpen, onClose, user, sales, plans }: UserDe
   const userPlan = plans?.find(p => p.name === user.planName);
 
   const userSales = sales
-    .filter(s => s.userId === user.id)
+    .filter(s => s.userId === user.id && (s.type === 'New' || s.type === 'Renewal'))
     .sort((a, b) => {
       if (!a.date || !b.date) return 0;
       try {

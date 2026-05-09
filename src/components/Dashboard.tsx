@@ -24,10 +24,16 @@ import {
   YAxis, 
   CartesianGrid, 
   Tooltip, 
-  ResponsiveContainer 
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend
 } from 'recharts';
-import { cn, getStatus, isInMonth, getNow } from '../utils';
-import { startOfMonth, subMonths, addDays, isBefore, parseISO, format } from 'date-fns';
+import { cn, getStatus, isInMonth, getNow, safeFormat } from '../utils';
+import { startOfMonth, subMonths, addDays, isBefore, isAfter, parseISO, format, endOfMonth, differenceInDays, max, min } from 'date-fns';
+
+const COLORS = ['#3b82f6', '#10b981', '#f97316', '#a855f7', '#f43f5e', '#6366f1'];
 
 interface DashboardProps {
   setActiveTab: (tab: any) => void;
@@ -46,6 +52,7 @@ export function Dashboard({ setActiveTab }: DashboardProps) {
   const [fetchedSales, setFetchedSales] = useState<any[]>([]);
   const [fetchedExpenses, setFetchedExpenses] = useState<any[]>([]);
   const [fetchedUsers, setFetchedUsers] = useState<any[]>([]);
+  const [fetchedPlans, setFetchedPlans] = useState<any[]>([]);
   const [loadingMetrics, setLoadingMetrics] = useState(true);
 
   const handleSendReminder = async (user: any) => {
@@ -100,16 +107,18 @@ export function Dashboard({ setActiveTab }: DashboardProps) {
     const startOfTrend = startOfMonth(subMonths(currentMonth, 11));
 
     // Queries
-    const salesQ = query(collection(db, 'sales'), where('date', '>=', startOfTrend.toISOString()));
+    const salesQ = query(collection(db, 'sales'), where('date', '>=', subMonths(currentMonth, 18).toISOString())); // Wide fetch for revenue recognition
     const expensesQ = query(collection(db, 'expenses'), where('date', '>=', startOfTrend.toISOString()));
     const usersQ = query(collection(db, 'users'));
+    const plansQ = query(collection(db, 'plans'));
 
     let salesLoaded = false;
     let expensesLoaded = false;
     let usersLoaded = false;
+    let plansLoaded = false;
 
     const checkLoading = () => {
-      if (salesLoaded && expensesLoaded && usersLoaded) {
+      if (salesLoaded && expensesLoaded && usersLoaded && plansLoaded) {
         setLoadingMetrics(false);
       }
     };
@@ -132,10 +141,17 @@ export function Dashboard({ setActiveTab }: DashboardProps) {
       checkLoading();
     }, (error) => handleFirestoreError(error, OperationType.LIST, 'users'));
 
+    const unsubPlans = onSnapshot(plansQ, snapshot => {
+      setFetchedPlans(snapshot.docs.map(d => ({id: d.id, ...d.data()})));
+      plansLoaded = true;
+      checkLoading();
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'plans'));
+
     return () => {
       unsubSales();
       unsubExpenses();
       unsubUsers();
+      unsubPlans();
     };
   }, [currentMonthKey]);
 
@@ -155,10 +171,17 @@ export function Dashboard({ setActiveTab }: DashboardProps) {
     }
   }), [fetchedUsers, threeDaysFromNow, currentMonth]);
   
+  const uniqueSalesList = useMemo(() => Array.from(new Map(fetchedSales.map(s => [s.id, s])).values()), [fetchedSales]);
+  
   const newUsersThisMonth = useMemo(() => fetchedUsers.filter(u => isInMonth(u.createdAt, currentMonth)), [fetchedUsers, currentMonth]);
-  const totalSalesThisMonth = useMemo(() => fetchedSales.filter(s => isInMonth(s.date, currentMonth)), [fetchedSales, currentMonth]);
+  const totalSalesThisMonth = useMemo(() => uniqueSalesList.filter(s => isInMonth(s.date, currentMonth) && (s.type === 'New' || s.type === 'Renewal')), [uniqueSalesList, currentMonth]);
+  const cashSalesAmountThisMonth = useMemo(() => totalSalesThisMonth.reduce((acc, s) => acc + Number(s.amount || 0), 0), [totalSalesThisMonth]);
   const renewedSalesThisMonth = useMemo(() => totalSalesThisMonth.filter(s => s.type === 'Renewal'), [totalSalesThisMonth]);
-  const revenueThisMonth = useMemo(() => totalSalesThisMonth.reduce((acc, s) => acc + s.amount, 0), [totalSalesThisMonth]);
+  
+  const revenueThisMonth = useMemo(() => {
+    return totalSalesThisMonth.reduce((acc, s) => acc + Number(s.amount || 0), 0);
+  }, [totalSalesThisMonth]);
+
   const expensesThisMonth = useMemo(() => fetchedExpenses.filter(e => isInMonth(e.date, currentMonth)).reduce((acc, e) => acc + e.amount, 0), [fetchedExpenses, currentMonth]);
   const netProfitThisMonth = revenueThisMonth - expensesThisMonth;
 
@@ -171,17 +194,44 @@ export function Dashboard({ setActiveTab }: DashboardProps) {
   
   const netChange = newUsersThisMonth.length - expiredEventsThisMonth.length;
 
-  // Revenue Breakdown by Plan
+  // Revenue Breakdown by Plan (Recognized Revenue)
   const revenueByPlan = useMemo(() => {
+    const monthStart = startOfMonth(currentMonth);
+    const monthEnd = endOfMonth(currentMonth);
     const breakdown: Record<string, number> = {};
-    totalSalesThisMonth.forEach(s => {
+
+    uniqueSalesList.forEach(s => {
+      if (!s.amount || s.amount <= 0 || s.type === 'Expired') return;
+      
+      let duration = s.durationDays;
+      if (!duration) {
+        const plan = fetchedPlans.find(p => p.name === s.planName);
+        duration = plan ? plan.durationDays : 30;
+      }
+      
+      const startDate = parseISO(s.startDate || s.date);
+      let endDate = s.endDate ? parseISO(s.endDate) : addDays(startDate, duration);
+      
+      const overlapStart = max([startDate, monthStart]);
+      const overlapEnd = min([endDate, monthEnd]);
+      
+      if (isAfter(overlapStart, overlapEnd) || isAfter(overlapStart, monthEnd) || isBefore(overlapEnd, monthStart)) {
+        return;
+      }
+      
+      const overlapDays = differenceInDays(overlapEnd, overlapStart) + 1;
+      const totalDays = differenceInDays(endDate, startDate) || 1;
+      const actualOverlapDays = Math.max(0, Math.min(overlapDays, totalDays));
+      const monthlyPortion = (s.amount / totalDays) * actualOverlapDays;
+
       const plan = s.planName || 'Other';
-      breakdown[plan] = (breakdown[plan] || 0) + s.amount;
+      breakdown[plan] = (breakdown[plan] || 0) + monthlyPortion;
     });
+
     return Object.entries(breakdown)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
-  }, [totalSalesThisMonth]);
+  }, [fetchedSales, fetchedPlans, currentMonth]);
 
   // Growth Trend Data (Last 12 Months)
   const growthData = useMemo(() => {
@@ -189,10 +239,10 @@ export function Dashboard({ setActiveTab }: DashboardProps) {
     return last12Months.map(month => {
       const newInMonth = fetchedUsers.filter(u => isInMonth(u.createdAt, month)).length;
       
-      const renewalsInMonth = fetchedSales.filter(s => s.type === 'Renewal' && isInMonth(s.date, month));
+      const renewalsInMonth = uniqueSalesList.filter(s => s.type === 'Renewal' && isInMonth(s.date, month));
       const renewedIds = new Set(renewalsInMonth.map(s => s.userId));
       
-      const expiredSalesInMonth = fetchedSales.filter(s => s.type === 'Expired' && isInMonth(s.date, month));
+      const expiredSalesInMonth = uniqueSalesList.filter(s => s.type === 'Expired' && isInMonth(s.date, month));
       const trulyExpiredInMonth = expiredSalesInMonth.filter(s => !renewedIds.has(s.userId)).length;
       
       return {
@@ -206,16 +256,16 @@ export function Dashboard({ setActiveTab }: DashboardProps) {
 
   const stats = [
     { 
-      label: 'Active Users', 
-      value: activeUsers.length, 
-      icon: Users, 
+      label: 'Monthly Revenue', 
+      value: `${Math.round(revenueThisMonth).toLocaleString()} Ks`, 
+      icon: TrendingUp, 
       color: 'text-emerald-500', 
       bg: 'bg-emerald-500/10',
       trend: '+12%'
     },
     { 
-      label: 'Net Profit', 
-      value: `${netProfitThisMonth.toLocaleString()} Ks`, 
+      label: 'Cash Collected', 
+      value: `${cashSalesAmountThisMonth.toLocaleString()} Ks`, 
       icon: DollarSign, 
       color: 'text-brand-primary', 
       bg: 'bg-brand-primary/10',
@@ -329,19 +379,51 @@ export function Dashboard({ setActiveTab }: DashboardProps) {
           </div>
 
           <div className="lg:col-span-4 lg:border-l border-brand-border lg:pl-12">
-            <p className="text-[10px] text-brand-text-muted font-bold uppercase tracking-widest mb-4">Revenue Breakdown</p>
+            <p className="text-[10px] text-brand-text-muted font-bold uppercase tracking-widest mb-6">Revenue Breakdown</p>
+            
+            <div className="h-[180px] w-full mb-6">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={revenueByPlan}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={5}
+                    dataKey="value"
+                  >
+                    {revenueByPlan.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'var(--color-brand-card)', 
+                      border: '1px solid var(--color-brand-border)', 
+                      borderRadius: '12px',
+                      fontSize: '11px',
+                      boxShadow: 'var(--shadow-medium)',
+                      padding: '10px'
+                    }}
+                    formatter={(value: number) => [`${value.toLocaleString()} Ks`, 'Revenue']}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+
             <div className="space-y-3">
-              {revenueByPlan.map((item) => (
+              {revenueByPlan.map((item, index) => (
                 <div key={item.name} className="flex items-center justify-between group">
                   <div className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-brand-primary group-hover:scale-150 transition-transform" />
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
                     <span className="text-xs font-medium text-brand-text">{item.name}</span>
                   </div>
-                  <span className="text-xs font-bold text-brand-text">{item.value.toLocaleString()} Ks</span>
+                  <span className="text-xs font-bold text-brand-text">{Math.round(item.value).toLocaleString()} Ks</span>
                 </div>
               ))}
               {revenueByPlan.length === 0 && (
-                <p className="text-xs text-brand-text-muted italic">No sales recorded.</p>
+                <p className="text-xs text-brand-text-muted italic text-center py-4">No sales recorded.</p>
               )}
             </div>
           </div>
@@ -511,32 +593,31 @@ export function Dashboard({ setActiveTab }: DashboardProps) {
               Recent Activity
             </h3>
             <div className="space-y-4">
-              {totalSalesThisMonth.slice(0, 4).map((sale) => (
-                <div key={sale.id} className="flex items-center justify-between group">
-                  <div className="flex items-center gap-3">
-                    <div className={cn(
-                      "w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold uppercase",
-                      sale.type === 'New' ? "bg-blue-500/10 text-blue-600" : "bg-brand-primary/10 text-brand-primary"
-                    )}>
-                      {sale.userName.charAt(0)}
+              {(() => {
+                const uniqueSales = Array.from(new Map(fetchedSales.map(s => [s.id, s])).values())
+                  .filter(s => s.type === 'New' || s.type === 'Renewal')
+                  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                
+                return uniqueSales.slice(0, 4).map((sale) => (
+                  <div key={sale.id} className="flex items-center justify-between group">
+                    <div className="flex items-center gap-3">
+                      <div className={cn(
+                        "w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold uppercase",
+                        sale.type === 'New' ? "bg-blue-500/10 text-blue-600" : "bg-brand-primary/10 text-brand-primary"
+                      )}>
+                        {sale.userName.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-brand-text">{sale.userName}</p>
+                        <p className="text-[10px] font-bold text-brand-text-muted uppercase tracking-widest mt-0.5">
+                          {sale.type} • {safeFormat(sale.date, 'MMM d')}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xs font-bold text-brand-text">{sale.userName}</p>
-                      <p className="text-[10px] font-bold text-brand-text-muted uppercase tracking-widest mt-0.5">
-                        {sale.type} • {(() => {
-                          if (!sale.date) return 'N/A';
-                          try {
-                            return format(parseISO(sale.date), 'MMM d');
-                          } catch (e) {
-                            return 'Invalid Date';
-                          }
-                        })()}
-                      </p>
-                    </div>
+                    <p className="text-xs font-bold text-emerald-600">+{sale.amount.toLocaleString()}</p>
                   </div>
-                  <p className="text-xs font-bold text-emerald-600">+{sale.amount.toLocaleString()}</p>
-                </div>
-              ))}
+                ));
+              })()}
               {fetchedSales.length === 0 && (
                 <p className="text-center text-brand-text-muted py-8 text-[10px] font-bold uppercase tracking-widest">No activity</p>
               )}

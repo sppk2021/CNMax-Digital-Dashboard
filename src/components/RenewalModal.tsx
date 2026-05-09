@@ -75,6 +75,9 @@ export function RenewalModal({ isOpen, onClose, user, plans }: RenewalModalProps
         date: now.toISOString(),
         amount: amount,
         type: 'Renewal',
+        durationDays: renewalMode === 'plan' ? plans.find(p => p.id === selectedPlanId)?.durationDays : undefined,
+        startDate: (getStatus(user.expiryDate, user.subscriptionStartDate) === 'Expired' ? now : parseISO(user.expiryDate)).toISOString(),
+        endDate: newExpiry.toISOString(),
         notes: notes.trim()
       }).catch(e => handleFirestoreError(e, OperationType.CREATE, 'sales'));
 

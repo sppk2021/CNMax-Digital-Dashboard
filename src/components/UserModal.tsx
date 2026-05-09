@@ -62,6 +62,9 @@ export function UserModal({ isOpen, onClose, plans }: UserModalProps) {
           amount: plan.price,
           type: 'New',
           planName: plan.name,
+          durationDays: plan.durationDays,
+          startDate: now.toISOString(),
+          endDate: addDays(now, plan.durationDays).toISOString(),
           notes: notes.trim()
         }).catch(e => handleFirestoreError(e, OperationType.CREATE, 'sales'));
       }

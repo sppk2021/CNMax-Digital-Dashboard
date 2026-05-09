@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { isAfter, parseISO, isWithinInterval, startOfMonth, endOfMonth } from 'date-fns';
+import { isAfter, parseISO, isWithinInterval, startOfMonth, endOfMonth, format } from 'date-fns';
 import { toZonedTime, formatInTimeZone } from 'date-fns-tz';
 import { auth } from './firebase';
 
@@ -9,6 +9,32 @@ const TIMEZONE = 'UTC';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
+}
+
+/**
+ * Robustly formats a potential date input (ISO string, Timestamp, Date object)
+ */
+export function safeFormat(dateInput: any, formatStr: string): string {
+  if (!dateInput) return 'N/A';
+  try {
+    let date: Date;
+    if (typeof dateInput === 'string') {
+      date = parseISO(dateInput);
+    } else if (dateInput instanceof Date) {
+      date = dateInput;
+    } else if (dateInput && typeof dateInput.toDate === 'function') {
+      date = dateInput.toDate();
+    } else if (dateInput && typeof dateInput.seconds === 'number') {
+      date = new Date(dateInput.seconds * 1000);
+    } else {
+      return 'Invalid Date';
+    }
+
+    if (isNaN(date.getTime())) return 'Invalid Date';
+    return format(date, formatStr);
+  } catch (e) {
+    return 'Invalid Date';
+  }
 }
 
 export enum OperationType {
